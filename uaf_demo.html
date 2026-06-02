@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAF vs Standard LLM — Предиктивная Эпистемология</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@700;800&display=swap');
+
+  :root {
+    --bg: #04060a;
+    --surface: #0b0f18;
+    --surface2: #0f1525;
+    --border: #1a2035;
+    --blue: #3498db;
+    --yellow: #f1c40f;
+    --green: #2ecc71;
+    --orange: #f39c12;
+    --red: #e74c3c;
+    --cyan: #00d4ff;
+    --purple: #9b59b6;
+    --text: #c8d6ef;
+    --muted: #4a5568;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none; z-index: 0;
+  }
+
+  .wrap { max-width: 1440px; margin: 0 auto; padding: 24px; position: relative; z-index: 1; }
+
+  /* ─── HEADER ─── */
+  .header {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px 32px;
+    margin-bottom: 20px;
+    position: relative; overflow: hidden;
+  }
+  .header::before {
+    content: ''; position: absolute; top:0; left:0; right:0; height:1px;
+    background: linear-gradient(90deg, transparent, var(--cyan), var(--purple), transparent);
+  }
+  .header h1 {
+    font-family: 'Syne', sans-serif; font-size: 22px; font-weight: 800;
+    background: linear-gradient(90deg, #fff 0%, var(--cyan) 50%, var(--purple) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 8px;
+  }
+  .header-sub { color: var(--muted); font-size: 11px; line-height: 1.8; }
+  .header-formula {
+    margin-top: 10px;
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .formula-item { color: var(--muted); font-size: 10px; }
+  .formula-item span { color: var(--cyan); }
+
+  /* ─── CONTROLS ─── */
+  .controls {
+    display: flex; gap: 12px; margin-bottom: 20px;
+    align-items: center; flex-wrap: wrap;
+  }
+  .btn {
+    background: transparent; border: 1px solid;
+    padding: 7px 18px; font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; letter-spacing: 1px; cursor: pointer;
+    text-transform: uppercase; transition: all 0.15s;
+    position: relative; overflow: hidden;
+  }
+  .btn:hover { transform: translateY(-1px); filter: brightness(1.3); }
+  .btn:active { transform: translateY(0); }
+  .btn-cyan { border-color: var(--cyan); color: var(--cyan); }
+  .btn-orange { border-color: var(--orange); color: var(--orange); }
+  .btn-red { border-color: var(--red); color: var(--red); }
+  .btn-muted { border-color: var(--muted); color: var(--muted); }
+
+  .speed-control { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 10px; }
+  input[type=range] { -webkit-appearance:none; width:80px; height:2px; background:var(--border); outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:10px; height:10px; border-radius:50%; background:var(--cyan); cursor:pointer; }
+
+  /* ─── MAIN 2-COL ─── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border);
+    position: relative; overflow: hidden;
+  }
+  .panel::before { content: ''; position: absolute; top:0; left:0; right:0; height:1px; }
+  .panel.red::before { background: linear-gradient(90deg, transparent, var(--red), transparent); }
+  .panel.green::before { background: linear-gradient(90deg, transparent, var(--green), transparent); }
+  .panel.cyan::before { background: linear-gradient(90deg, transparent, var(--cyan), transparent); }
+  .panel.purple::before { background: linear-gradient(90deg, transparent, var(--purple), transparent); }
+  .panel.orange::before { background: linear-gradient(90deg, transparent, var(--orange), transparent); }
+
+  .panel-hdr {
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .panel-title { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .panel-badge {
+    font-size: 9px; padding: 3px 10px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .badge-std { background: rgba(231,76,60,0.15); border: 1px solid var(--red); color: var(--red); }
+  .badge-uaf { background: rgba(46,204,113,0.15); border: 1px solid var(--green); color: var(--green); }
+
+  .panel-body { padding: 12px 16px; }
+
+  /* ─── CHART CANVASES ─── */
+  canvas.chart { width:100%; height:180px; display:block; background: transparent; }
+  canvas.mini { width:100%; height:90px; display:block; }
+
+  /* ─── METRICS ROW ─── */
+  .metrics-row {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 1px; background: var(--border);
+    border-top: 1px solid var(--border);
+  }
+  .metric-cell {
+    background: var(--surface); padding: 8px 12px;
+    text-align: center;
+  }
+  .metric-lbl { font-size: 8px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+  .metric-num { font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 700; }
+
+  /* ─── FREE ENERGY DECOMPOSITION ─── */
+  .fe-decomp { padding: 12px 16px; }
+  .fe-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+    font-size: 11px;
+  }
+  .fe-row:last-child { border: none; }
+  .fe-label { color: var(--muted); min-width: 130px; }
+  .fe-value { font-weight: 700; font-size: 13px; }
+  .fe-bar { flex: 1; height: 3px; background: rgba(255,255,255,0.05); margin: 0 10px; }
+  .fe-bar-fill { height: 100%; transition: width 0.3s ease; }
+
+  /* ─── AUFHEBUNG TIMELINE ─── */
+  .timeline-panel { margin-bottom: 16px; }
+  canvas.timeline { width:100%; height:40px; display:block; }
+
+  /* ─── UAF SCALE ─── */
+  .scale-panel { padding: 16px; }
+  .scale-track {
+    position: relative; height: 8px;
+    background: linear-gradient(90deg, var(--red), var(--red) 20%, var(--orange) 35%,
+      rgba(255,255,255,0.1) 50%, var(--cyan) 65%, var(--green) 80%, var(--green));
+    border-radius: 4px; margin: 16px 0 8px;
+  }
+  .scale-thumb {
+    position: absolute; top: -6px;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 2px solid var(--cyan);
+    transition: left 0.5s ease;
+    transform: translateX(-50%);
+    box-shadow: 0 0 12px var(--cyan);
+  }
+  .scale-labels {
+    display: flex; justify-content: space-between;
+    font-size: 8px; color: var(--muted); letter-spacing: 1px;
+  }
+
+  /* ─── BOTTOM COMPARISON ─── */
+  .bottom-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  /* ─── LOG ─── */
+  .log-body {
+    height: 100px; overflow-y: auto; padding: 8px 14px;
+    font-size: 10px; line-height: 1.8;
+  }
+  .log-body::-webkit-scrollbar { width: 2px; }
+  .log-body::-webkit-scrollbar-thumb { background: var(--border); }
+  .log-entry { display: flex; gap: 10px; }
+  .log-t { color: var(--muted); min-width: 50px; }
+  .log-m { color: var(--text); }
+  .log-m.green { color: var(--green); }
+  .log-m.red { color: var(--red); }
+  .log-m.orange { color: var(--orange); }
+  .log-m.cyan { color: var(--cyan); }
+
+  /* ─── THEORY TOOLTIP ─── */
+  .theory-box {
+    background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.2);
+    padding: 10px 14px; font-size: 10px; line-height: 1.8; color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .theory-box strong { color: var(--cyan); }
+
+  /* ─── CHECKBOX TOGGLE ─── */
+  .toggle-row { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+  .toggle-item {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 10px; color: var(--muted); cursor: pointer;
+    background: var(--surface); border: 1px solid var(--border);
+    padding: 5px 12px;
+  }
+  .toggle-item input { cursor: pointer; accent-color: var(--cyan); }
+  .toggle-item:hover { border-color: var(--cyan); color: var(--text); }
+
+  .sep { width: 1px; height: 20px; background: var(--border); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>UAF против Стандартного LLM: Предиктивная Эпистемология</h1>
+    <div class="header-sub">
+      Почему UAF не переобучается — а начинает сомневаться и синтезирует новое состояние (Aufhebung)
+    </div>
+    <div class="header-formula">
+      <div class="formula-item"><span>F = U − T·H</span> &nbsp;свободная энергия</div>
+      <div class="formula-item"><span>U</span> = удивление (surprisal)</div>
+      <div class="formula-item"><span>H</span> = энтропия логитов (сомнение)</div>
+      <div class="formula-item"><span>T</span> = температура (накопленная ошибка)</div>
+      <div class="formula-item"><span>doubt</span> = 0.4·H + 0.6·residuum</div>
+      <div class="formula-item"><span>Aufhebung</span> при doubt > θ</div>
+    </div>
+  </div>
+
+  <!-- THEORY BOX -->
+  <div class="theory-box">
+    <strong>§5 THEORY.md</strong> — Диалектика как алгоритм:
+    <strong>M₀</strong> (тезис) → аномалия <strong>R(t)</strong> (антитезис) →
+    <strong>M₁ = argmin[λ·D_KL(M‖M₀) + Σ−log M(y|x)]</strong> (синтез).
+    Стандартная модель переобучается. UAF сомневается и синтезирует.
+    <strong>NPG(M,T) = Σ log[M(wₜ|w_{&lt;t}) / M₀(wₜ|w_{&lt;t})]</strong> — мера предиктивного выигрыша.
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <button class="btn btn-cyan" id="btn-run" onclick="toggleRun()">▶ ЗАПУСК</button>
+    <button class="btn btn-red" id="btn-anomaly" onclick="injectAnomaly()">⚡ АНОМАЛИЯ</button>
+    <button class="btn btn-orange" onclick="forceSynthesis()">🌀 AUFHEBUNG</button>
+    <button class="btn btn-muted" onclick="resetAll()">↺ СБРОС</button>
+    <div class="sep"></div>
+    <div class="toggle-row">
+      <label class="toggle-item"><input type="checkbox" id="chk-es" checked> Early Stopping</label>
+      <label class="toggle-item"><input type="checkbox" id="chk-overfit"> Форс. переобучение</label>
+    </div>
+    <div class="sep"></div>
+    <div class="speed-control">
+      СКОРОСТЬ <input type="range" id="speed" min="1" max="30" value="12">
+      <span id="spd-lbl">12×</span>
+    </div>
+  </div>
+
+  <!-- MAIN CHARTS -->
+  <div class="two-col">
+
+    <!-- STANDARD -->
+    <div class="panel red">
+      <div class="panel-hdr">
+        <span class="panel-title">Стандартная модель</span>
+        <span class="panel-badge badge-std">CE Loss Only</span>
+      </div>
+      <div class="panel-body" style="padding:0">
+        <canvas class="chart" id="c-std"></canvas>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-cell">
+          <div class="metric-lbl">Train Loss</div>
+          <div class="metric-num" id="std-train" style="color:var(--blue)">—</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-lbl">Val Loss</div>
+          <div class="metric-num" id="std-val" style="color:var(--yellow)">—</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-lbl">Overfit Δ</div>
+          <div class="metric-num" id="std-overfit" style="color:var(--red)">—</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-lbl">Status</div>
+          <div class="metric-num" id="std-status" style="color:var(--muted);font-size:10px">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UAF -->
+    <div class="panel green">
+      <div class="panel-hdr">
+        <span class="panel-title">UAF модель</span>
+        <span class="panel-badge badge-uaf">F = U − T·H</span>
+      </div>
+      <div class="panel-body" style="padding:0">
+        <canvas class="chart" id="c-uaf"></canvas>
+      </div>
+      <div class="metrics-row">
+        <div class="metric-cell">
+          <div class="metric-lbl">Train Loss</div>
+          <div class="metric-num" id="uaf-train" style="color:var(--green)">—</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-lbl">Val Loss</div>
+          <div class="metric-num" id="uaf-val" style="color:var(--orange)">—</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-lbl">Doubt</div>
+          <div class="metric-num" id="uaf-doubt" style="color:var(--orange)">—</div>
+        </div>
+        <div class="metric-cell">
+          <div class="metric-lbl">Aufhebung</div>
+          <div class="metric-num" id="uaf-auf" style="color:var(--cyan)">×0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FREE ENERGY DECOMPOSITION -->
+  <div class="two-col">
+    <div class="panel purple">
+      <div class="panel-hdr">
+        <span class="panel-title">Декомпозиция свободной энергии F = U − T·H</span>
+      </div>
+      <div class="fe-decomp" id="fe-decomp">
+        <div class="fe-row">
+          <span class="fe-label">U — Энергия (surprisal)</span>
+          <div class="fe-bar"><div class="fe-bar-fill" id="bar-U" style="background:var(--red)"></div></div>
+          <span class="fe-value" id="val-U" style="color:var(--red)">—</span>
+        </div>
+        <div class="fe-row">
+          <span class="fe-label">T — Температура</span>
+          <div class="fe-bar"><div class="fe-bar-fill" id="bar-T" style="background:var(--orange)"></div></div>
+          <span class="fe-value" id="val-T" style="color:var(--orange)">—</span>
+        </div>
+        <div class="fe-row">
+          <span class="fe-label">H — Энтропия (сомнение)</span>
+          <div class="fe-bar"><div class="fe-bar-fill" id="bar-H" style="background:var(--yellow)"></div></div>
+          <span class="fe-value" id="val-H" style="color:var(--yellow)">—</span>
+        </div>
+        <div class="fe-row" style="margin-top:4px;border-top:1px solid rgba(255,255,255,0.07);padding-top:6px">
+          <span class="fe-label" style="color:var(--purple)">F = U − T·H</span>
+          <div class="fe-bar"><div class="fe-bar-fill" id="bar-F" style="background:var(--purple)"></div></div>
+          <span class="fe-value" id="val-F" style="color:var(--purple)">—</span>
+        </div>
+        <div class="fe-row">
+          <span class="fe-label" style="color:var(--orange)">Doubt = 0.4·H + 0.6·R</span>
+          <div class="fe-bar"><div class="fe-bar-fill" id="bar-D" style="background:var(--orange)"></div></div>
+          <span class="fe-value" id="val-D" style="color:var(--orange)">—</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- F history chart -->
+    <div class="panel cyan">
+      <div class="panel-hdr">
+        <span class="panel-title">История F, H, T (UAF)</span>
+        <span id="npg-lbl" style="color:var(--cyan);font-size:11px;font-weight:700">NPG: —</span>
+      </div>
+      <div class="panel-body" style="padding:0">
+        <canvas class="chart" id="c-fe"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUFHEBUNG TIMELINE -->
+  <div class="panel cyan timeline-panel">
+    <div class="panel-hdr">
+      <span class="panel-title">Aufhebung Timeline — моменты диалектического синтеза</span>
+      <span id="auf-total" style="color:var(--cyan);font-size:11px">0 синтезов</span>
+    </div>
+    <div style="padding: 8px 16px 12px">
+      <canvas class="timeline" id="c-timeline"></canvas>
+      <div style="font-size:8px;color:var(--muted);margin-top:4px;letter-spacing:1px">
+        ГОРИЗОНТ ШАГОВ → &nbsp;&nbsp;
+        <span style="color:var(--cyan)">▲</span> Aufhebung (синтез) &nbsp;&nbsp;
+        <span style="color:var(--red)">▲</span> Аномалия
+      </div>
+    </div>
+  </div>
+
+  <!-- BOTTOM ROW -->
+  <div class="bottom-row">
+
+    <!-- UAF Scale -->
+    <div class="panel orange">
+      <div class="panel-hdr">
+        <span class="panel-title">UAF Шкала (NPG → [-3, +3])</span>
+      </div>
+      <div class="scale-panel">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:8px">
+          Нормированный предиктивный выигрыш над случайной базовой моделью
+        </div>
+        <div class="scale-track">
+          <div class="scale-thumb" id="scale-thumb" style="left:50%"></div>
+        </div>
+        <div class="scale-labels">
+          <span>−3<br>анти-<br>пред.</span>
+          <span>−2</span>
+          <span>−1</span>
+          <span style="color:var(--cyan)">0</span>
+          <span>+1</span>
+          <span>+2</span>
+          <span>+3<br>уник.<br>пред.</span>
+        </div>
+        <div style="text-align:center;margin-top:12px">
+          <span style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--cyan)" id="scale-num">0.00</span>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:2px;margin-top:4px" id="scale-desc">—</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- NPG Chart -->
+    <div class="panel green">
+      <div class="panel-hdr">
+        <span class="panel-title">Накопленный NPG</span>
+        <span style="font-size:9px;color:var(--muted)">vs случайная базовая</span>
+      </div>
+      <div style="padding:0">
+        <canvas class="chart" id="c-npg"></canvas>
+      </div>
+    </div>
+
+    <!-- Log -->
+    <div class="panel cyan">
+      <div class="panel-hdr">
+        <span class="panel-title">Системный лог</span>
+        <span id="step-ctr" style="color:var(--muted);font-size:10px">step 0</span>
+      </div>
+      <div class="log-body" id="log-body"></div>
+    </div>
+
+  </div>
+
+</div><!-- wrap -->
+
+<script>
+// ============================================================
+// UAF DEMO ENGINE
+// ============================================================
+
+// ─── Standard Model ────────────────────────────────────────
+class StandardModel {
+  constructor() { this.reset(); }
+
+  reset() {
+    this.step = 0;
+    this.w = 1.0 + (Math.random() - 0.5) * 0.6;
+    this.b = 0.0;
+    this.lr = 0.025;
+    this.trainLosses = [];
+    this.valLosses = [];
+    this.overfitDelta = 0;
+    this.status = 'training';
+    this.earlyStopped = false;
+    this.bestVal = Infinity;
+    this.patience = 0;
+    this.maxPatience = 60;
+    this.anomalySteps = [];
+  }
+
+  stepTrain(forceOverfit = false) {
+    this.step++;
+
+    // Обычные данные
+    const x = (Math.random() - 0.5) * 4;
+    const y = 2.0 * x + Math.random() * 0.08;
+
+    // Форсированное переобучение: модель "запоминает" шум
+    const noise_train = forceOverfit ? (Math.random() - 0.5) * 1.5 : Math.random() * 0.08;
+    const y_noisy = 2.0 * x + noise_train;
+
+    const pred = this.w * x + this.b;
+    const trainLoss = (pred - y_noisy) ** 2;
+
+    // Обновление
+    const effectiveLR = forceOverfit ? this.lr * 2.5 : this.lr;
+    this.w -= effectiveLR * 2 * (pred - y_noisy) * x;
+    this.b -= effectiveLR * 2 * (pred - y_noisy);
+    this.w = Math.max(-6, Math.min(6, this.w));
+
+    // Val: чистые данные
+    const xv = (Math.random() - 0.5) * 4;
+    const yv = 2.0 * xv;
+    const vPred = this.w * xv + this.b;
+    const valLoss = (vPred - yv) ** 2;
+
+    this.trainLosses.push(trainLoss);
+    this.valLosses.push(valLoss);
+    if (this.trainLosses.length > 400) { this.trainLosses.shift(); this.valLosses.shift(); }
+
+    // Overfit delta
+    const recentTrain = avg(this.trainLosses.slice(-10));
+    const recentVal = avg(this.valLosses.slice(-10));
+    this.overfitDelta = Math.max(0, recentVal - recentTrain);
+
+    // Early stopping
+    const esEnabled = document.getElementById('chk-es').checked;
+    if (esEnabled && !this.earlyStopped) {
+      if (recentVal < this.bestVal - 0.001) {
+        this.bestVal = recentVal;
+        this.patience = 0;
+      } else {
+        this.patience++;
+        if (this.patience > this.maxPatience) {
+          this.earlyStopped = true;
+          this.status = 'stopped';
+        }
+      }
+    }
+
+    if (this.earlyStopped) this.status = 'stopped';
+    else if (this.overfitDelta > 0.15) this.status = 'overfit';
+    else this.status = 'training';
+
+    return { trainLoss, valLoss };
+  }
+
+  injectAnomaly() {
+    this.anomalySteps.push(this.step);
+    for (let i = 0; i < 12; i++) {
+      const x = (Math.random() - 0.5) * 4;
+      const y = -3.0 * x + (Math.random() - 0.5) * 2.5;
+      const pred = this.w * x + this.b;
+      const loss = (pred - y) ** 2;
+      this.w -= this.lr * 2 * (pred - y) * x;
+    }
+    this.earlyStopped = false;
+    this.patience = 0;
+  }
+}
+
+// ─── UAF Model ──────────────────────────────────────────────
+class UAFModel {
+  constructor() { this.reset(); }
+
+  reset() {
+    this.step = 0;
+    this.w = 1.0 + (Math.random() - 0.5) * 0.6;
+    this.b = 0.0;
+    this.baseLR = 0.025;
+
+    // UAF state
+    this.U = 1.0;       // energy (surprisal)
+    this.H = 0.5;       // entropy (normalized)
+    this.T = 0.8;       // temperature
+    this.F = 0.5;       // free energy
+    this.residuum = 0.2;
+    this.doubt = 0.3;
+    this.npg = 0.0;
+    this.uafScale = 0.0;
+
+    this.trainLosses = [];
+    this.valLosses = [];
+    this.feHistory = [];
+    this.hHistory = [];
+    this.tHistory = [];
+    this.npgHistory = [];
+    this.aufhebungCount = 0;
+    this.aufhebungSteps = [];
+    this.anomalySteps = [];
+    this.lastAufhebungStep = -500;
+    this.doubtThreshold = 1.1;
+  }
+
+  stepTrain(forceOverfit = false) {
+    this.step++;
+
+    const x = (Math.random() - 0.5) * 4;
+    const y = 2.0 * x + Math.random() * 0.08;
+
+    const noise = forceOverfit ? (Math.random() - 0.5) * 1.0 : Math.random() * 0.05;
+    const y_noisy = 2.0 * x + noise;
+
+    const pred = this.w * x + this.b;
+    const surprisal = (pred - y_noisy) ** 2;
+
+    // H: энтропия ~ степень неопределённости предсказания
+    this.H = Math.tanh(Math.abs(pred - y_noisy) * 0.8);
+
+    // Residuum (EMA)
+    this.residuum = 0.96 * this.residuum + 0.04 * surprisal;
+
+    // Температура
+    this.T = Math.max(0.3, 0.5 + this.residuum * 0.8);
+
+    // Энергия
+    this.U = Math.min(surprisal, 10.0);
+
+    // Свободная энергия F = U − T·H
+    this.F = this.U - this.T * this.H;
+
+    // Сомнение
+    this.doubt = 0.4 * this.H + 0.6 * Math.min(this.residuum, 2.0);
+
+    // NPG: baseline = y²  (константное предсказание 0)
+    const baseline = y * y;
+    const stepNPG = Math.log(Math.max(baseline, 1e-8)) - Math.log(Math.max(surprisal, 1e-8));
+    this.npg += stepNPG;
+    this.uafScale = Math.tanh(this.npg / Math.max(this.step, 1) / 2.0) * 3;
+
+    // Динамический LR: снижается с сомнением
+    const effectiveLR = this.baseLR / (1.0 + this.doubt * 1.5);
+
+    // Обновление весов
+    this.w -= effectiveLR * 2 * (pred - y_noisy) * x;
+    this.b -= effectiveLR * 2 * (pred - y_noisy);
+    this.w = Math.max(-6, Math.min(6, this.w));
+
+    // Aufhebung check
+    let aufhebungFired = false;
+    if (this.doubt > this.doubtThreshold && this.step - this.lastAufhebungStep > 200) {
+      this.aufhebungCount++;
+      this.aufhebungSteps.push(this.step);
+      this.lastAufhebungStep = this.step;
+
+      const noiseScale = 0.08 * this.T;
+      this.w += (Math.random() - 0.5) * 2 * noiseScale;
+      this.b += (Math.random() - 0.5) * noiseScale;
+
+      this.doubt = 0.35;
+      this.residuum *= 0.4;
+      this.H = 0.6;
+      this.T = 0.6;
+      this.F = this.U - this.T * this.H;
+      aufhebungFired = true;
+    }
+
+    // Val
+    const xv = (Math.random() - 0.5) * 4;
+    const yv = 2.0 * xv;
+    const vPred = this.w * xv + this.b;
+    const valLoss = (vPred - yv) ** 2;
+
+    this.trainLosses.push(surprisal);
+    this.valLosses.push(valLoss);
+    this.feHistory.push(this.F);
+    this.hHistory.push(this.H);
+    this.tHistory.push(this.T);
+    this.npgHistory.push(this.npg);
+
+    for (const arr of [this.trainLosses, this.valLosses, this.feHistory,
+                        this.hHistory, this.tHistory, this.npgHistory]) {
+      if (arr.length > 400) arr.shift();
+    }
+
+    return { surprisal, valLoss, aufhebungFired };
+  }
+
+  injectAnomaly() {
+    this.anomalySteps.push(this.step);
+    for (let i = 0; i < 12; i++) {
+      const x = (Math.random() - 0.5) * 4;
+      const y = -3.0 * x + (Math.random() - 0.5) * 2.5;
+      const pred = this.w * x + this.b;
+      this.residuum = Math.min(1.5, this.residuum + (pred - y) ** 2 * 0.1);
+      this.doubt = Math.min(2.0, this.doubt + 0.15);
+    }
+    this.U = Math.min(this.U + 0.5, 10.0);
+    this.F = this.U - this.T * this.H;
+  }
+}
+
+// ─── Helpers ────────────────────────────────────────────────
+function avg(arr) {
+  if (!arr.length) return 0;
+  return arr.reduce((a, b) => a + b, 0) / arr.length;
+}
+
+function drawLine(ctx, data, W, H, color, lineW = 1.5, fillAlpha = 0) {
+  if (data.length < 2) return;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = Math.max(max - min, 0.001);
+  const pad = 8;
+
+  if (fillAlpha > 0) {
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = pad + (i / (data.length - 1)) * (W - pad * 2);
+      const y = pad + (1 - (v - min) / range) * (H - pad * 2);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(W - pad, H - pad);
+    ctx.lineTo(pad, H - pad);
+    ctx.closePath();
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, color + Math.floor(fillAlpha * 255).toString(16).padStart(2, '0'));
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fill();
+  }
+
+  ctx.beginPath();
+  data.forEach((v, i) => {
+    const x = pad + (i / (data.length - 1)) * (W - pad * 2);
+    const y = pad + (1 - (v - min) / range) * (H - pad * 2);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineW;
+  ctx.stroke();
+}
+
+function verticalMarkers(ctx, steps, maxSteps, W, H, color, label) {
+  if (!steps.length) return;
+  steps.forEach(s => {
+    const x = (s / Math.max(maxSteps, 1)) * W;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H);
+    ctx.strokeStyle = color + '66';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    ctx.beginPath();
+    ctx.moveTo(x, H - 12);
+    ctx.lineTo(x - 5, H);
+    ctx.lineTo(x + 5, H);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  });
+}
+
+// ─── Simulation state ───────────────────────────────────────
+const std = new StandardModel();
+const uaf = new UAFModel();
+let running = false;
+let simId = null;
+let speed = 12;
+let logs = [];
+
+const COLORS = {
+  blue: '#3498db', yellow: '#f1c40f', green: '#2ecc71',
+  orange: '#f39c12', red: '#e74c3c', cyan: '#00d4ff',
+  purple: '#9b59b6', muted: '#4a5568'
+};
+
+const scales = {
+  '-3': 'анти-предсказывает', '-2': 'системно ошибается',
+  '-1': 'хуже интуиции', '0': 'как случайность',
+  '1': 'лучше базовой', '2': 'лучше всех моделей', '3': 'уникальное предсказание'
+};
+
+// ─── Drawing ─────────────────────────────────────────────────
+function resizeCanvas(id) {
+  const c = document.getElementById(id);
+  c.width = c.clientWidth * window.devicePixelRatio || c.clientWidth;
+  c.height = c.clientHeight * window.devicePixelRatio || c.clientHeight;
+  return c;
+}
+
+function drawStd() {
+  const c = document.getElementById('c-std');
+  c.width = c.offsetWidth; c.height = c.offsetHeight;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const train = std.trainLosses.slice(-160);
+  const val = std.valLosses.slice(-160);
+
+  // Overfit zone
+  if (std.overfitDelta > 0.15) {
+    ctx.fillStyle = 'rgba(231,76,60,0.07)';
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  drawLine(ctx, train, W, H, COLORS.blue, 1.5, 0.12);
+  drawLine(ctx, val, W, H, COLORS.yellow, 1.5, 0.08);
+
+  // Aufhebung steps (anomalies for std)
+  verticalMarkers(ctx, std.anomalySteps.map(s => {
+    return Math.max(0, s - (std.step - 160));
+  }).filter(s => s > 0), 160, W, H, COLORS.red, '⚡');
+
+  // Labels
+  ctx.font = '9px JetBrains Mono';
+  if (std.overfitDelta > 0.15) {
+    ctx.fillStyle = COLORS.red;
+    ctx.fillText('⚠ ПЕРЕОБУЧЕНИЕ', W - 100, 18);
+  }
+  if (std.earlyStopped) {
+    ctx.fillStyle = COLORS.cyan;
+    ctx.fillText('⏹ EARLY STOP', W - 90, 34);
+  }
+
+  // Legend
+  ctx.fillStyle = COLORS.blue; ctx.fillText('── train', 10, 18);
+  ctx.fillStyle = COLORS.yellow; ctx.fillText('── val', 10, 30);
+}
+
+function drawUAF() {
+  const c = document.getElementById('c-uaf');
+  c.width = c.offsetWidth; c.height = c.offsetHeight;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const train = uaf.trainLosses.slice(-160);
+  const val = uaf.valLosses.slice(-160);
+
+  drawLine(ctx, train, W, H, COLORS.green, 1.5, 0.1);
+  drawLine(ctx, val, W, H, COLORS.orange, 1.5, 0.07);
+
+  // Aufhebung markers
+  uaf.aufhebungSteps.forEach(s => {
+    const rel = s - (uaf.step - 160);
+    if (rel <= 0 || rel > 160) return;
+    const x = (rel / 160) * W;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H);
+    ctx.strokeStyle = COLORS.cyan + '55'; ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(x, 6); ctx.lineTo(x - 4, 14); ctx.lineTo(x + 4, 14);
+    ctx.closePath(); ctx.fillStyle = COLORS.cyan; ctx.fill();
+    ctx.fillStyle = COLORS.cyan; ctx.font = '8px JetBrains Mono';
+    ctx.fillText('Auf', x - 8, 25);
+  });
+
+  // Anomaly markers
+  uaf.anomalySteps.forEach(s => {
+    const rel = s - (uaf.step - 160);
+    if (rel <= 0 || rel > 160) return;
+    const x = (rel / 160) * W;
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H);
+    ctx.strokeStyle = COLORS.red + '55'; ctx.lineWidth = 1;
+    ctx.setLineDash([2, 4]); ctx.stroke(); ctx.setLineDash([]);
+  });
+
+  // Doubt overlay
+  if (uaf.doubt > 0.8) {
+    ctx.fillStyle = COLORS.orange;
+    ctx.font = '9px JetBrains Mono';
+    ctx.fillText(`🤔 СОМНЕНИЕ: ${uaf.doubt.toFixed(2)}`, W - 130, 18);
+  }
+
+  ctx.fillStyle = COLORS.green; ctx.font = '9px JetBrains Mono'; ctx.fillText('── train', 10, 18);
+  ctx.fillStyle = COLORS.orange; ctx.fillText('── val', 10, 30);
+}
+
+function drawFE() {
+  const c = document.getElementById('c-fe');
+  c.width = c.offsetWidth; c.height = c.offsetHeight;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const fe = uaf.feHistory.slice(-160);
+  const hh = uaf.hHistory.slice(-160);
+  const tt = uaf.tHistory.slice(-160);
+
+  // Combine all for shared scale
+  const allVals = [...fe, ...hh, ...tt].filter(v => isFinite(v));
+  if (allVals.length < 2) return;
+  const min = Math.min(...allVals);
+  const max = Math.max(...allVals);
+  const range = Math.max(max - min, 0.001);
+  const pad = 8;
+
+  const mapY = v => pad + (1 - (v - min) / range) * (H - pad * 2);
+
+  // Zero line
+  const zeroY = mapY(0);
+  if (zeroY > 0 && zeroY < H) {
+    ctx.beginPath(); ctx.moveTo(0, zeroY); ctx.lineTo(W, zeroY);
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.2)'; ctx.font = '8px JetBrains Mono';
+    ctx.fillText('F=0', 4, zeroY - 3);
+  }
+
+  [[fe, COLORS.purple, 'F'], [hh, COLORS.yellow, 'H'], [tt, COLORS.orange, 'T']].forEach(([data, color, label]) => {
+    if (data.length < 2) return;
+    ctx.beginPath();
+    data.forEach((v, i) => {
+      const x = pad + (i / (data.length - 1)) * (W - pad * 2);
+      const y = mapY(v);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  ctx.font = '9px JetBrains Mono';
+  ctx.fillStyle = COLORS.purple; ctx.fillText('── F', W - 80, 16);
+  ctx.fillStyle = COLORS.yellow; ctx.fillText('── H', W - 80, 28);
+  ctx.fillStyle = COLORS.orange; ctx.fillText('── T', W - 80, 40);
+}
+
+function drawNPG() {
+  const c = document.getElementById('c-npg');
+  c.width = c.offsetWidth; c.height = c.offsetHeight;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const data = uaf.npgHistory.slice(-160);
+  if (data.length < 2) return;
+
+  drawLine(ctx, data, W, H, COLORS.green, 2, 0.15);
+
+  // Zero reference
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = Math.max(max - min, 0.001);
+  const pad = 8;
+  const zeroY = pad + (1 - (0 - min) / range) * (H - pad * 2);
+  if (zeroY > 0 && zeroY < H) {
+    ctx.beginPath(); ctx.moveTo(0, zeroY); ctx.lineTo(W, zeroY);
+    ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+    ctx.setLineDash([4, 4]); ctx.stroke(); ctx.setLineDash([]);
+  }
+}
+
+function drawTimeline() {
+  const c = document.getElementById('c-timeline');
+  c.width = c.offsetWidth; c.height = c.offsetHeight;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const maxStep = Math.max(uaf.step, 1);
+
+  // Track
+  ctx.fillStyle = 'rgba(255,255,255,0.04)';
+  ctx.fillRect(0, H / 2 - 1, W, 2);
+
+  // Anomaly markers
+  [...uaf.anomalySteps, ...std.anomalySteps].forEach(s => {
+    const x = (s / maxStep) * W;
+    ctx.beginPath(); ctx.arc(x, H / 2, 4, 0, Math.PI * 2);
+    ctx.fillStyle = COLORS.red + 'bb'; ctx.fill();
+  });
+
+  // Aufhebung markers
+  uaf.aufhebungSteps.forEach(s => {
+    const x = (s / maxStep) * W;
+    ctx.beginPath();
+    ctx.moveTo(x, H / 2 - 12);
+    ctx.lineTo(x - 6, H / 2 + 4);
+    ctx.lineTo(x + 6, H / 2 + 4);
+    ctx.closePath();
+    ctx.fillStyle = COLORS.cyan;
+    ctx.fill();
+
+    ctx.fillStyle = COLORS.cyan; ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(`#${uaf.aufhebungSteps.indexOf(s) + 1}`, x, H / 2 - 15);
+    ctx.textAlign = 'left';
+  });
+
+  // Current position
+  const cx = W - 3;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.stroke();
+}
+
+// ─── UI Updates ─────────────────────────────────────────────
+function updateMetrics() {
+  // Std
+  const sT = std.trainLosses.at(-1) ?? 0;
+  const sV = std.valLosses.at(-1) ?? 0;
+  document.getElementById('std-train').textContent = sT.toFixed(4);
+  document.getElementById('std-val').textContent = sV.toFixed(4);
+  document.getElementById('std-overfit').textContent = (std.overfitDelta * 100).toFixed(0) + '%';
+  const statusEl = document.getElementById('std-status');
+  statusEl.textContent = std.status === 'overfit' ? '⚠ OVERFIT' : std.status === 'stopped' ? '⏹ STOPPED' : '🟢 OK';
+  statusEl.style.color = std.status === 'overfit' ? 'var(--red)' : std.status === 'stopped' ? 'var(--cyan)' : 'var(--green)';
+
+  // UAF basic
+  document.getElementById('uaf-train').textContent = (uaf.trainLosses.at(-1) ?? 0).toFixed(4);
+  document.getElementById('uaf-val').textContent = (uaf.valLosses.at(-1) ?? 0).toFixed(4);
+  document.getElementById('uaf-doubt').textContent = uaf.doubt.toFixed(3);
+  document.getElementById('uaf-auf').textContent = `×${uaf.aufhebungCount}`;
+
+  // FE decomposition
+  const U = uaf.U, T = uaf.T, H = uaf.H, F = uaf.F, D = uaf.doubt;
+  document.getElementById('val-U').textContent = U.toFixed(4);
+  document.getElementById('val-T').textContent = T.toFixed(3);
+  document.getElementById('val-H').textContent = H.toFixed(4);
+  document.getElementById('val-F').textContent = F.toFixed(4);
+  document.getElementById('val-D').textContent = D.toFixed(3);
+  document.getElementById('bar-U').style.width = Math.min(100, U * 20) + '%';
+  document.getElementById('bar-T').style.width = Math.min(100, T * 50) + '%';
+  document.getElementById('bar-H').style.width = (H * 100) + '%';
+  const fPct = Math.min(100, Math.max(0, (F + 2) * 20));
+  document.getElementById('bar-F').style.width = fPct + '%';
+  document.getElementById('bar-D').style.width = Math.min(100, D * 70) + '%';
+
+  // NPG label
+  document.getElementById('npg-lbl').textContent = `NPG: ${uaf.npg.toFixed(1)}`;
+
+  // UAF scale
+  const sc = uaf.uafScale;
+  const pct = ((sc + 3) / 6) * 100;
+  document.getElementById('scale-thumb').style.left = pct + '%';
+  document.getElementById('scale-num').textContent = sc.toFixed(2);
+  const rounded = Math.round(sc);
+  document.getElementById('scale-desc').textContent = scales[String(rounded)] || '—';
+
+  // Step counter
+  document.getElementById('step-ctr').textContent = `step ${uaf.step}`;
+
+  // Timeline counter
+  document.getElementById('auf-total').textContent = `${uaf.aufhebungCount} синтезов`;
+}
+
+// ─── Logging ────────────────────────────────────────────────
+function addLog(msg, cls = '') {
+  logs.unshift({ t: uaf.step, msg, cls });
+  if (logs.length > 60) logs.pop();
+  const body = document.getElementById('log-body');
+  body.innerHTML = logs.slice(0, 14).map(l =>
+    `<div class="log-entry"><span class="log-t">[${String(l.t).padStart(5,'0')}]</span><span class="log-m ${l.cls}">${l.msg}</span></div>`
+  ).join('');
+}
+
+// ─── Simulation Step ─────────────────────────────────────────
+function simStep() {
+  const forceOverfit = document.getElementById('chk-overfit').checked;
+  std.stepTrain(forceOverfit);
+  const r = uaf.stepTrain(forceOverfit);
+
+  if (r.aufhebungFired) {
+    addLog(`🌀 Aufhebung #${uaf.aufhebungCount}: синтез новой модели (doubt=${uaf.doubt.toFixed(3)})`, 'cyan');
+  }
+  if (std.earlyStopped && std.patience === std.maxPatience) {
+    addLog(`⏹ Early Stopping активирован (шаг ${std.step})`, 'orange');
+  }
+  if (std.overfitDelta > 0.2 && uaf.step % 80 === 0) {
+    addLog(`⚠ Стандартная модель переобучается (Δ=${std.overfitDelta.toFixed(3)})`, 'red');
+  }
+
+  updateMetrics();
+  drawStd(); drawUAF(); drawFE(); drawNPG(); drawTimeline();
+}
+
+// ─── Loop ────────────────────────────────────────────────────
+function scheduleNext() {
+  if (!running) return;
+  const delay = Math.max(16, Math.round(1000 / speed));
+  simId = setTimeout(() => {
+    for (let i = 0; i < Math.max(1, Math.floor(speed / 10)); i++) simStep();
+    scheduleNext();
+  }, delay);
+}
+
+// ─── Controls ────────────────────────────────────────────────
+function toggleRun() {
+  running = !running;
+  document.getElementById('btn-run').textContent = running ? '⏸ ПАУЗА' : '▶ ЗАПУСК';
+  if (running) { addLog('▶ Симуляция запущена'); scheduleNext(); }
+  else { clearTimeout(simId); addLog('⏸ Пауза'); }
+}
+
+function injectAnomaly() {
+  std.injectAnomaly();
+  uaf.injectAnomaly();
+  addLog(`⚡ Аномалия: распределение данных изменилось (шаг ${uaf.step})`, 'red');
+  updateMetrics(); drawStd(); drawUAF(); drawFE(); drawTimeline();
+}
+
+function forceSynthesis() {
+  const prev = uaf.doubt;
+  uaf.doubt = uaf.doubtThreshold + 0.1;
+  uaf.stepTrain(false);
+  addLog(`🌀 Принудительный Aufhebung (doubt форсирован: ${prev.toFixed(2)}→${(uaf.doubtThreshold+0.1).toFixed(2)})`, 'cyan');
+}
+
+function resetAll() {
+  running = false;
+  clearTimeout(simId);
+  std.reset(); uaf.reset(); logs = [];
+  document.getElementById('btn-run').textContent = '▶ ЗАПУСК';
+  addLog('↺ Сброс. Нажмите ЗАПУСК.');
+  updateMetrics(); drawStd(); drawUAF(); drawFE(); drawNPG(); drawTimeline();
+}
+
+// Speed
+document.getElementById('speed').addEventListener('input', function() {
+  speed = +this.value;
+  document.getElementById('spd-lbl').textContent = this.value + '×';
+});
+
+window.addEventListener('resize', () => {
+  drawStd(); drawUAF(); drawFE(); drawNPG(); drawTimeline();
+});
+
+// Boot
+resetAll();
+addLog('UAF Demo инициализирован. F = U − T·H', 'cyan');
+addLog('Нажмите ▶ ЗАПУСК или ⚡ АНОМАЛИЯ для начала');
+</script>
+</body>
+</html>

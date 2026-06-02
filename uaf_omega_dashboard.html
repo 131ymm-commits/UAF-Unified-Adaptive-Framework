@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UAF-Ω Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@700;800&display=swap');
+  :root {
+    --bg:#04060a; --s1:#0b0f18; --s2:#0f1525; --brd:#1a2035;
+    --cyan:#00d4ff; --purple:#9b59b6; --green:#2ecc71;
+    --orange:#f39c12; --red:#e74c3c; --blue:#3498db;
+    --yellow:#f1c40f; --text:#c8d6ef; --muted:#4a5568;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;overflow-x:hidden}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,212,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,212,255,.025) 1px,transparent 1px);background-size:48px 48px;pointer-events:none;z-index:0}
+  .wrap{max-width:1480px;margin:0 auto;padding:20px;position:relative;z-index:1}
+
+  /* HEADER */
+  .hdr{background:var(--s1);border:1px solid var(--brd);padding:20px 28px;margin-bottom:16px;position:relative;overflow:hidden}
+  .hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),var(--purple),transparent)}
+  .hdr h1{font-family:'Syne',sans-serif;font-size:20px;font-weight:800;background:linear-gradient(90deg,#fff,var(--cyan) 50%,var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px}
+  .hdr-row{display:flex;gap:24px;flex-wrap:wrap;margin-top:8px;font-size:10px;color:var(--muted)}
+  .hdr-row span{color:var(--cyan)}
+
+  /* CONTROLS */
+  .ctrl{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+  .btn{background:transparent;border:1px solid;padding:6px 16px;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;cursor:pointer;text-transform:uppercase;transition:all .15s}
+  .btn:hover{transform:translateY(-1px);filter:brightness(1.3)}
+  .btn-c{border-color:var(--cyan);color:var(--cyan)} .btn-o{border-color:var(--orange);color:var(--orange)}
+  .btn-g{border-color:var(--green);color:var(--green)} .btn-r{border-color:var(--red);color:var(--red)}
+  .btn-m{border-color:var(--muted);color:var(--muted)}
+  .spd{display:flex;align-items:center;gap:8px;font-size:10px;color:var(--muted)}
+  input[type=range]{-webkit-appearance:none;width:80px;height:2px;background:var(--brd);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:10px;height:10px;border-radius:50%;background:var(--cyan);cursor:pointer}
+  .sep{width:1px;height:20px;background:var(--brd)}
+
+  /* PANELS */
+  .panel{background:var(--s1);border:1px solid var(--brd);position:relative;overflow:hidden}
+  .panel::before{content:'';position:absolute;top:0;left:0;right:0;height:1px}
+  .panel.c::before{background:linear-gradient(90deg,transparent,var(--cyan),transparent)}
+  .panel.g::before{background:linear-gradient(90deg,transparent,var(--green),transparent)}
+  .panel.p::before{background:linear(90deg,transparent,var(--purple),transparent)}
+  .panel.pp::before{background:linear-gradient(90deg,transparent,var(--purple),transparent)}
+  .panel.o::before{background:linear-gradient(90deg,transparent,var(--orange),transparent)}
+  .panel.r::before{background:linear-gradient(90deg,transparent,var(--red),transparent)}
+  .ph{padding:9px 14px;border-bottom:1px solid var(--brd);display:flex;justify-content:space-between;align-items:center}
+  .pt{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+  .pv{font-family:'Syne',sans-serif;font-size:15px;font-weight:700}
+  canvas{display:block;background:transparent}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:14px}
+
+  /* METRICS */
+  .mrow{display:flex;justify-content:space-between;align-items:center;padding:5px 14px;border-bottom:1px solid rgba(255,255,255,.03);font-size:11px}
+  .mrow:last-child{border:none}
+  .ml{color:var(--muted)} .mv{font-weight:700;font-size:13px}
+  .bar{width:100%;height:3px;background:rgba(255,255,255,.05);margin-top:3px}
+  .barf{height:100%;transition:width .4s ease}
+
+  /* BELIEF BARS */
+  .bf-grid{padding:12px 14px;display:grid;gap:8px}
+  .bf-row{display:grid;grid-template-columns:60px 1fr 40px;align-items:center;gap:8px;font-size:10px}
+  .bf-label{color:var(--muted);letter-spacing:1px}
+  .bf-track{background:rgba(255,255,255,.05);height:6px;border-radius:3px}
+  .bf-fill{height:100%;border-radius:3px;transition:width .4s ease}
+
+  /* BELIEF PIE */
+  .pie-wrap{display:flex;align-items:center;justify-content:center;padding:10px}
+
+  /* ACTIONS TABLE */
+  .act-table{padding:10px 14px;font-size:10px}
+  .act-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03);gap:8px}
+  .act-name{color:var(--muted);min-width:120px}
+  .act-bar-wrap{flex:1;height:8px;background:rgba(255,255,255,.05);border-radius:2px;align-self:center}
+  .act-bar{height:100%;border-radius:2px;transition:width .3s}
+  .act-val{min-width:50px;text-align:right;font-weight:600}
+
+  /* LOG */
+  .log{height:100px;overflow-y:auto;padding:8px 14px;font-size:10px;line-height:1.8}
+  .log::-webkit-scrollbar{width:2px} .log::-webkit-scrollbar-thumb{background:var(--brd)}
+  .le{display:flex;gap:10px} .lt{color:var(--muted);min-width:50px}
+  .lm{color:var(--text)} .lm.g{color:var(--green)} .lm.r{color:var(--red)}
+  .lm.o{color:var(--orange)} .lm.c{color:var(--cyan)} .lm.p{color:var(--purple)}
+
+  /* SCALE */
+  .scale-wrap{padding:14px 16px}
+  .scale-track{position:relative;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--red),var(--red) 20%,var(--orange) 35%,rgba(255,255,255,.1) 50%,var(--cyan) 65%,var(--green) 80%,var(--green));margin:12px 0 8px}
+  .scale-thumb{position:absolute;top:-6px;width:20px;height:20px;border-radius:50%;background:var(--s1);border:2px solid var(--cyan);transition:left .5s ease;transform:translateX(-50%);box-shadow:0 0 10px var(--cyan)}
+  .scale-lbls{display:flex;justify-content:space-between;font-size:8px;color:var(--muted)}
+
+  /* NOOSPHERE */
+  .ns-canvas{display:block;width:100%;height:200px}
+
+  /* HALLUCINATION */
+  .hall-row{padding:6px 14px;font-size:10px;border-bottom:1px solid rgba(255,255,255,.03);display:grid;grid-template-columns:1fr 80px 80px 50px}
+  .hall-hdr{color:var(--muted);font-size:9px;letter-spacing:1px;padding:6px 14px;border-bottom:1px solid var(--brd)}
+
+  /* MODE BADGE */
+  .mode-badge{font-size:9px;padding:3px 10px;letter-spacing:1px;text-transform:uppercase;border:1px solid}
+  .mode-raw{border-color:var(--blue);color:var(--blue)}
+  .mode-cons{border-color:var(--orange);color:var(--orange)}
+  .mode-synth{border-color:var(--green);color:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="hdr">
+    <h1>UAF-Ω DASHBOARD — Unified Adaptive Framework</h1>
+    <div class="hdr-row">
+      <div>Belief → Policy → Action → <span>PG (after obs)</span> → Update</div>
+      <div>U(ask) = E[max U(answer|new_obs)] + κ·IG − C_ask</div>
+      <div>U(answer_i) = (2p_i−1) − C − <span>P_self</span></div>
+      <div>PG = log[M(w|h) / M₀(w|h)] — <span>после наблюдения</span></div>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="ctrl">
+    <button class="btn btn-c" id="btn-run" onclick="toggleRun()">▶ ЗАПУСК</button>
+    <button class="btn btn-o" onclick="injectAnomaly()">⚡ АНОМАЛИЯ</button>
+    <button class="btn btn-g" onclick="runEpisodeManual()">▷ ЭПИЗОД</button>
+    <button class="btn btn-r" onclick="forceHallucination()">🧠 ГАЛЛЮЦ.</button>
+    <button class="btn btn-m" onclick="resetAll()">↺ СБРОС</button>
+    <div class="sep"></div>
+    <div class="spd">SPEED <input type="range" id="spd" min="1" max="20" value="6"> <span id="spd-lbl">6×</span></div>
+  </div>
+
+  <!-- ROW 1: Belief + Action utilities + UAF Scale -->
+  <div class="grid3">
+
+    <!-- BELIEF -->
+    <div class="panel c">
+      <div class="ph">
+        <span class="pt">Belief B_t over intents</span>
+        <span class="pv" id="top-intent" style="color:var(--cyan)">—</span>
+      </div>
+      <div class="bf-grid" id="bf-grid"></div>
+      <div style="padding:8px 14px 4px;font-size:9px;color:var(--muted)">
+        H(B) = <span id="belief-h" style="color:var(--yellow)">—</span> &nbsp;|&nbsp; 
+        Residuum: <span id="residuum" style="color:var(--orange)">—</span>
+      </div>
+    </div>
+
+    <!-- ACTION UTILITIES -->
+    <div class="panel pp">
+      <div class="ph">
+        <span class="pt">Action Utilities U(a)</span>
+        <span class="pv" id="chosen-action" style="color:var(--purple)">—</span>
+      </div>
+      <div class="act-table" id="act-table"></div>
+    </div>
+
+    <!-- UAF SCALE -->
+    <div class="panel o">
+      <div class="ph">
+        <span class="pt">UAF Scale (NPG → [-3,+3])</span>
+        <span class="pv" id="scale-num" style="color:var(--orange)">0.00</span>
+      </div>
+      <div class="scale-wrap">
+        <div class="scale-track">
+          <div class="scale-thumb" id="scale-thumb" style="left:50%"></div>
+        </div>
+        <div class="scale-lbls">
+          <span>-3</span><span>-2</span><span>-1</span>
+          <span style="color:var(--cyan)">0</span>
+          <span>+1</span><span>+2</span><span>+3</span>
+        </div>
+        <div style="text-align:center;margin-top:10px">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:2px" id="scale-desc">—</div>
+          <div style="margin-top:8px;font-size:10px">
+            NPG: <span id="npg-total" style="color:var(--green);font-weight:700">0.0</span>
+            &nbsp;|&nbsp;
+            Steps: <span id="n-preds" style="color:var(--muted)">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROW 2: Loss/PG history + FE decomp + Self-monitor -->
+  <div class="grid3">
+
+    <!-- PG HISTORY -->
+    <div class="panel g">
+      <div class="ph">
+        <span class="pt">Cumulative NPG vs Steps</span>
+        <span id="avg-pg" style="color:var(--green);font-size:11px;font-weight:700">avg PG: —</span>
+      </div>
+      <canvas id="c-pg" style="width:100%;height:150px"></canvas>
+    </div>
+
+    <!-- FREE ENERGY DECOMPOSITION -->
+    <div class="panel pp">
+      <div class="ph">
+        <span class="pt">F = U − T·H (live)</span>
+        <span id="fe-val" style="color:var(--purple);font-size:13px;font-weight:700">—</span>
+      </div>
+      <div style="padding:10px 14px">
+        <div class="mrow">
+          <span class="ml">U (surprisal)</span>
+          <span class="mv" id="fe-U" style="color:var(--red)">—</span>
+        </div>
+        <div class="bar"><div class="barf" id="bar-U" style="background:var(--red)"></div></div>
+        <div class="mrow" style="margin-top:4px">
+          <span class="ml">T (temperature)</span>
+          <span class="mv" id="fe-T" style="color:var(--orange)">—</span>
+        </div>
+        <div class="bar"><div class="barf" id="bar-T" style="background:var(--orange)"></div></div>
+        <div class="mrow" style="margin-top:4px">
+          <span class="ml">H (entropy)</span>
+          <span class="mv" id="fe-H" style="color:var(--yellow)">—</span>
+        </div>
+        <div class="bar"><div class="barf" id="bar-H" style="background:var(--yellow)"></div></div>
+        <div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.07);padding-top:6px">
+          <div class="mrow">
+            <span class="ml" style="color:var(--purple)">F = U − T·H</span>
+            <span class="mv" id="fe-F" style="color:var(--purple)">—</span>
+          </div>
+          <div class="bar"><div class="barf" id="bar-F" style="background:var(--purple)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SELF MONITOR -->
+    <div class="panel r">
+      <div class="ph">
+        <span class="pt">Self-Monitor (калибровка)</span>
+        <span class="pv" id="self-acc" style="color:var(--green)">—</span>
+      </div>
+      <div style="padding:10px 14px">
+        <div class="mrow">
+          <span class="ml">Penalty P_self</span>
+          <span class="mv" id="sm-penalty" style="color:var(--red)">0.000</span>
+        </div>
+        <div class="bar"><div class="barf" id="bar-penalty" style="background:var(--red)"></div></div>
+        <div class="mrow" style="margin-top:4px">
+          <span class="ml">Calibration Err</span>
+          <span class="mv" id="sm-cal" style="color:var(--orange)">—</span>
+        </div>
+        <div class="mrow">
+          <span class="ml">Avg Confidence</span>
+          <span class="mv" id="sm-conf" style="color:var(--yellow)">—</span>
+        </div>
+        <div class="mrow">
+          <span class="ml">Episodes</span>
+          <span class="mv" id="sm-eps" style="color:var(--muted)">0</span>
+        </div>
+        <div class="mrow">
+          <span class="ml">Ask Rate</span>
+          <span class="mv" id="sm-ask" style="color:var(--cyan)">—</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ROW 3: UAF vs Greedy bars + LLM Shell + Hallucination -->
+  <div class="grid3">
+
+    <!-- COMPARISON -->
+    <div class="panel c">
+      <div class="ph">
+        <span class="pt">UAF-Ω vs Greedy (live)</span>
+        <span id="vs-delta" style="color:var(--cyan);font-size:10px">Δ reward: —</span>
+      </div>
+      <canvas id="c-vs" style="width:100%;height:150px"></canvas>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border-top:1px solid var(--brd)">
+        <div style="padding:6px 12px;border-right:1px solid var(--brd)">
+          <div style="font-size:8px;color:var(--green);letter-spacing:1px">UAF-Ω</div>
+          <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--green)" id="uaf-reward">—</div>
+          <div style="font-size:9px;color:var(--muted)" id="uaf-sr">success: —</div>
+        </div>
+        <div style="padding:6px 12px">
+          <div style="font-size:8px;color:var(--red);letter-spacing:1px">Greedy</div>
+          <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--red)" id="g-reward">—</div>
+          <div style="font-size:9px;color:var(--muted)" id="g-sr">success: —</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LLM SHELL -->
+    <div class="panel o">
+      <div class="ph">
+        <span class="pt">LLM Shell Mode</span>
+        <span class="mode-badge mode-raw" id="mode-badge">llm_raw</span>
+      </div>
+      <div style="padding:10px 14px">
+        <div class="mrow">
+          <span class="ml">Trust: llm_raw</span>
+          <span class="mv" id="trust-raw" style="color:var(--blue)">0.50</span>
+        </div>
+        <div class="bar"><div class="barf" id="bar-traw" style="background:var(--blue);width:50%"></div></div>
+        <div class="mrow" style="margin-top:4px">
+          <span class="ml">Trust: conservative</span>
+          <span class="mv" id="trust-cons" style="color:var(--orange)">0.50</span>
+        </div>
+        <div class="bar"><div class="barf" id="bar-tcons" style="background:var(--orange);width:50%"></div></div>
+        <div class="mrow" style="margin-top:4px">
+          <span class="ml">Trust: synthesis</span>
+          <span class="mv" id="trust-synth" style="color:var(--green)">0.50</span>
+        </div>
+        <div class="bar"><div class="barf" id="bar-tsynth" style="background:var(--green);width:50%"></div></div>
+        <div class="mrow" style="margin-top:6px;border-top:1px solid rgba(255,255,255,.06);padding-top:6px">
+          <span class="ml">Dialectic switches</span>
+          <span class="mv" id="dialectic-cnt" style="color:var(--cyan)">0</span>
+        </div>
+        <div class="mrow">
+          <span class="ml">Consec. failures</span>
+          <span class="mv" id="consec-fail" style="color:var(--red)">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOG -->
+    <div class="panel c">
+      <div class="ph">
+        <span class="pt">System Log</span>
+        <span id="step-ctr" style="color:var(--muted);font-size:10px">step 0</span>
+      </div>
+      <div class="log" id="log"></div>
+    </div>
+
+  </div>
+
+  <!-- ROW 4: Noosphere -->
+  <div class="panel c" style="margin-bottom:14px">
+    <div class="ph">
+      <span class="pt">Noosphere — Multi-Agent Belief Dynamics</span>
+      <span id="ns-consensus" style="color:var(--cyan);font-size:10px">consensus: —</span>
+    </div>
+    <canvas id="c-noosphere" style="width:100%;height:180px"></canvas>
+  </div>
+
+  <!-- ROW 5: Hallucination guard + step history -->
+  <div class="grid2">
+    <div class="panel r">
+      <div class="ph">
+        <span class="pt">Hallucination Guard</span>
+        <span id="hall-total" style="color:var(--red);font-size:10px">0 detected</span>
+      </div>
+      <div class="hall-hdr">
+        <div style="display:grid;grid-template-columns:1fr 80px 80px 50px;gap:8px">
+          <span>Episode</span><span>Consistency</span><span>Severity</span><span>Status</span>
+        </div>
+      </div>
+      <div id="hall-rows" style="max-height:120px;overflow-y:auto"></div>
+    </div>
+
+    <div class="panel g">
+      <div class="ph">
+        <span class="pt">Reward History (last 60)</span>
+        <span id="avg-rew-lbl" style="color:var(--green);font-size:10px">avg: —</span>
+      </div>
+      <canvas id="c-rew" style="width:100%;height:155px"></canvas>
+    </div>
+  </div>
+
+</div><!-- wrap -->
+
+<script>
+// ============================================================
+// UAF-Ω SIMULATION ENGINE
+// ============================================================
+
+const INTENTS = ['math','code','theory'];
+const ACTIONS = ['ask_clarify','answer_math','answer_code','answer_theory','reflect','search_memory'];
+const COLORS = {
+  cyan:'#00d4ff', purple:'#9b59b6', green:'#2ecc71', orange:'#f39c12',
+  red:'#e74c3c', blue:'#3498db', yellow:'#f1c40f', muted:'#4a5568',
+};
+const INTENT_COLORS = { math: COLORS.blue, code: COLORS.green, theory: COLORS.purple };
+
+// ── Math ──────────────────────────────────────────────────
+const M = {
+  entropy(d){ const e=1e-12; return -Object.values(d).reduce((s,p)=>s+Math.max(e,p)*Math.log(Math.max(e,p)),0); },
+  normalize(d){ const s=Object.values(d).reduce((a,b)=>a+b,0)||1; return Object.fromEntries(Object.entries(d).map(([k,v])=>[k,v/s])); },
+  answerUtil(p,cost=0.05,penalty=0){ return (2*p-1)-cost-penalty; },
+  uafScale(npg,n){ return Math.tanh(npg/Math.max(n,1)/2)*3; },
+  freeEnergy(U,T,H){ return U-T*H; },
+  diversityPenalty(beliefs,tau=0.1,gamma=0.5){
+    if(beliefs.length<2)return 0;
+    const k=INTENTS[0];
+    const ps=beliefs.map(b=>b[k]);
+    const mn=ps.reduce((a,b)=>a+b,0)/ps.length;
+    const std=Math.sqrt(ps.reduce((s,p)=>s+(p-mn)**2,0)/ps.length);
+    return gamma*Math.max(0,tau-std);
+  },
+};
+
+// ── World Model ────────────────────────────────────────────
+class WorldModel {
+  constructor(){
+    this._vocab={
+      math:['integral','matrix','proof','theorem','equation','derivative','limit','lemma'],
+      code:['python','bug','function','class','api','stack','debug','traceback'],
+      theory:['uaf','boundary','prediction','model','agent','theory','update','prior'],
+    };
+    this._noise=['help','please','problem','question','need','make','what','how'];
+    this._all=[...new Set([...Object.values(this._vocab).flat(),...this._noise])];
+  }
+  sampleObs(intent,clarify=false,len=4){
+    const vocab=this._vocab[intent];
+    const noise=this._noise;
+    const pool=clarify?[...vocab,...vocab,...noise]:([...vocab,...noise,...this._noise]);
+    const toks=[];
+    for(let i=0;i<len;i++) toks.push(pool[Math.floor(Math.random()*pool.length)]);
+    return toks.join(' ');
+  }
+  posterior(prior,text,clarify=false){
+    const toks=text.toLowerCase().split(/\s+/);
+    const logps={};
+    for(const i of INTENTS){
+      let lp=Math.log(Math.max(prior[i],1e-12));
+      for(const t of toks){
+        if(this._vocab[i].includes(t)) lp+=clarify?2.2:1.6;
+        else if(this._noise.includes(t)) lp+=clarify?-0.5:0.3;
+        else lp-=0.3;
+      }
+      logps[i]=lp;
+    }
+    const mx=Math.max(...Object.values(logps));
+    const exp=Object.fromEntries(Object.entries(logps).map(([k,v])=>[k,Math.exp(v-mx)]));
+    return M.normalize(exp);
+  }
+  mixLogP(text,belief,clarify=false){
+    const toks=text.toLowerCase().split(/\s+/);
+    const xs=INTENTS.map(i=>{
+      let lp=Math.log(Math.max(belief[i],1e-12));
+      for(const t of toks) if(this._vocab[i].includes(t)) lp+=clarify?2.2:1.6;
+      return lp;
+    });
+    const mx=Math.max(...xs);
+    return mx+Math.log(xs.reduce((s,x)=>s+Math.exp(x-mx),0));
+  }
+  uniformLogP(text){ return text.split(' ').length*Math.log(1/(this._all.length+50)); }
+}
+
+// ── Self-Monitor ───────────────────────────────────────────
+class SelfMonitor {
+  constructor(){ this.penalty=0; this.records=[]; }
+  record(conf,correct){
+    this.records.push([conf,correct]);
+    if(conf>=0.75&&!correct) this.penalty=Math.min(0.45,this.penalty+0.09);
+    else if(conf>=0.75&&correct) this.penalty=Math.max(0,this.penalty-0.03);
+  }
+  accuracy(){ if(!this.records.length)return 0; return this.records.filter(([,c])=>c).length/this.records.length; }
+  avgConf(){ if(!this.records.length)return 0; return this.records.reduce((s,[c])=>s+c,0)/this.records.length; }
+  calErr(){
+    if(this.records.length<5)return 0;
+    const bins=Array.from({length:5},()=>[]);
+    for(const[conf,c]of this.records) bins[Math.min(Math.floor(conf*5),4)].push(c?1:0);
+    return bins.reduce((e,b,i)=>b.length?e+Math.abs(b.reduce((s,x)=>s+x,0)/b.length-(i+.5)/5)*b.length/this.records.length:e,0);
+  }
+}
+
+// ── Episode Memory ─────────────────────────────────────────
+class EpisodeMemory {
+  constructor(){ this.items=[]; }
+  add(ep){ this.items.push(ep); if(this.items.length>300)this.items.shift(); }
+  priorFromMemory(text){
+    const toks=new Set(text.toLowerCase().split(/\s+/));
+    const scores=Object.fromEntries(INTENTS.map(i=>[i,1]));
+    for(const ep of this.items){
+      const o=new Set(ep.text.split(' ')); const ov=[...toks].filter(t=>o.has(t)).length;
+      if(ov>0) scores[ep.intent]=(scores[ep.intent]||0)+ov*(ep.correct?1:.25);
+    }
+    return M.normalize(scores);
+  }
+  search(q,k=3){
+    const toks=new Set(q.toLowerCase().split(/\s+/));
+    return this.items.map(ep=>({ ep, sc:[...toks].filter(t=>ep.text.includes(t)).length }))
+      .sort((a,b)=>b.sc-a.sc).slice(0,k).filter(x=>x.sc>0).map(x=>x.ep);
+  }
+  recentPG(n=20){ const r=this.items.slice(-n); return r.length?r.reduce((s,e)=>s+e.pg,0)/r.length:0; }
+}
+
+// ── Policy ─────────────────────────────────────────────────
+class Policy {
+  constructor(askCost=0.30,ansCost=0.05,refCost=0.10,srchCost=0.08,kInfo=0.30,kRef=0.20,mc=30){
+    this.askCost=askCost; this.ansCost=ansCost; this.refCost=refCost; this.srchCost=srchCost;
+    this.kInfo=kInfo; this.kRef=kRef; this.mc=mc;
+  }
+  computeAll(belief,wm,mon,mem,clarified,searched,step){
+    const utils={};
+    for(const i of INTENTS) utils[`answer_${i}`]=M.answerUtil(belief[i],this.ansCost,mon.penalty);
+    utils.ask_clarify=clarified?-1e9:this._askUtil(belief,wm,mon);
+    const H=M.entropy(belief);
+    utils.reflect=(H>0.8&&step>1)?this.kRef*H-this.refCost:-1e9;
+    const rPG=mem.recentPG();
+    utils.search_memory=(!searched&&mem.items.length>3)?this.kInfo*Math.max(rPG,0)-this.srchCost:-1e9;
+    return utils;
+  }
+  _askUtil(belief,wm,mon){
+    const H0=M.entropy(belief); let total=0;
+    for(let r=0;r<this.mc;r++){
+      const hidden=this._sampleDist(belief);
+      const obs=wm.sampleObs(hidden,true);
+      const post2=wm.posterior(belief,obs,true);
+      const best=Math.max(...INTENTS.map(i=>M.answerUtil(post2[i],this.ansCost,mon.penalty)));
+      const ig=H0-M.entropy(post2);
+      total+=best+this.kInfo*ig-this.askCost;
+    }
+    return total/this.mc;
+  }
+  _sampleDist(d){ let r=Math.random(),acc=0,last=null; for(const[k,p]of Object.entries(d)){last=k;acc+=p;if(r<=acc)return k;} return last; }
+  select(utils){ return Object.entries(utils).reduce((a,b)=>b[1]>a[1]?b:a)[0]; }
+}
+
+// ── LLM Shell ──────────────────────────────────────────────
+class LLMShell {
+  constructor(){
+    this.mode='llm_raw'; this.modeTrust={llm_raw:.5,conservative:.5,synthesis:.5};
+    this.consecFails=0; this.dialecticCount=0; this.failThreshold=4;
+  }
+  update(correct,conf){
+    const a=0.15;
+    if(correct){ this.modeTrust[this.mode]=Math.min(.95,this.modeTrust[this.mode]+a*conf); this.consecFails=Math.max(0,this.consecFails-1); }
+    else { this.modeTrust[this.mode]=Math.max(.05,this.modeTrust[this.mode]-a*(1-conf)); this.consecFails++; }
+    if(this.consecFails>=this.failThreshold) this._switch();
+  }
+  _switch(){
+    this.dialecticCount++; this.consecFails=0;
+    const modes=['llm_raw','conservative','synthesis'];
+    const idx=modes.indexOf(this.mode);
+    const prev=this.mode;
+    this.mode=modes[(idx+1)%modes.length];
+    addLog(`🌀 LLM Aufhebung #${this.dialecticCount}: ${prev}→${this.mode}`, 'c');
+  }
+}
+
+// ── Hallucination Guard ────────────────────────────────────
+class HallGuard {
+  constructor(){ this.records=[]; }
+  check(n=3){
+    // Симуляция: consistency = 1 - случайный компонент
+    const consistency=0.4+Math.random()*0.5;
+    const severity=Math.max(0,1-consistency);
+    const detected=severity>0.45;
+    const rec={consistency,severity,detected};
+    this.records.push(rec);
+    if(this.records.length>20)this.records.shift();
+    return rec;
+  }
+}
+
+// ── Noosphere ──────────────────────────────────────────────
+class Noosphere {
+  constructor(n=4){
+    this.n=n;
+    this.agents=Array.from({length:n},(_,i)=>({
+      belief:M.normalize({math:.2+Math.random()*.6,code:.2+Math.random()*.6,theory:.2+Math.random()*.6}),
+      pg:.3+Math.random()*.4, name:`A${i+1}`,
+      color:[COLORS.cyan,COLORS.green,COLORS.purple,COLORS.orange][i]
+    }));
+    this.trust=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?0:.5));
+    this.history=[]; this.step=0;
+  }
+  tick(){
+    this.step++;
+    const maxPG=Math.max(...this.agents.map(a=>a.pg));
+    for(let i=0;i<this.n;i++) for(let j=0;j<this.n;j++) if(i!==j) this.trust[i][j]=Math.max(.05,Math.min(.95,this.agents[j].pg/Math.max(maxPG,.01)));
+    const newB=this.agents.map((a,i)=>{
+      const b={...a.belief};
+      for(let j=0;j<this.n;j++){
+        if(i===j)continue;
+        const t=this.trust[i][j];
+        for(const k of INTENTS) b[k]+=0.08*t*(this.agents[j].belief[k]-b[k]);
+      }
+      return M.normalize(b);
+    });
+    this.agents.forEach((a,i)=>{ a.belief=newB[i]; a.pg=Math.max(.1,Math.min(.99,a.pg+.002+(Math.random()-.5)*.02)); });
+    const dp=M.diversityPenalty(this.agents.map(a=>a.belief));
+    if(dp>0.15){
+      const mn=this.agents.reduce((a,b)=>a.pg<b.pg?a:b);
+      for(const k of INTENTS) mn.belief[k]+=.04*(Math.random()-.5);
+      mn.belief=M.normalize(mn.belief);
+    }
+    const consensus=M.normalize(INTENTS.reduce((o,k)=>({...o,[k]:this.agents.reduce((s,a,i)=>s+this.trust[0][i]*a.belief[k],0)}),{}));
+    this.history.push({consensus,dp,step:this.step});
+    if(this.history.length>200)this.history.shift();
+    return {consensus,dp};
+  }
+}
+
+// ── Environment ────────────────────────────────────────────
+class Env {
+  constructor(wm){ this.wm=wm; this.hidden=null; this.done=false; this.asked=false; }
+  reset(intent){ this.hidden=intent||INTENTS[Math.floor(Math.random()*3)]; this.done=false; this.asked=false; return this.wm.sampleObs(this.hidden,false); }
+  step(action){
+    if(action==='ask_clarify'){
+      if(this.asked){this.done=true;return['NO_MORE_INFO',-.5,true,{intent:this.hidden,correct:false}];}
+      this.asked=true;
+      return[this.wm.sampleObs(this.hidden,true),-.2,false,{intent:this.hidden}];
+    }
+    if(action==='reflect') return['HINT',-.08,false,{intent:this.hidden}];
+    if(action==='search_memory') return['MEMORY',-.06,false,{intent:this.hidden}];
+    if(action.startsWith('answer_')){
+      const pred=action.split('_')[1];
+      const correct=pred===this.hidden;
+      this.done=true;
+      return[correct?'SUCCESS':`FAIL_${this.hidden.toUpperCase()}`,correct?1:-1,true,{intent:this.hidden,correct}];
+    }
+    return['UNKNOWN',0,false,{}];
+  }
+}
+
+// ── Agents ─────────────────────────────────────────────────
+class UAFAgent {
+  constructor(wm,name='uaf'){
+    this.wm=wm; this.name=name;
+    this.memory=new EpisodeMemory();
+    this.monitor=new SelfMonitor();
+    this.policy=new Policy();
+    this.totalReward=0; this.totalPG=0; this.nPreds=0; this.nEps=0;
+    this.askCount=0; this.correctCount=0;
+    this.rewardHist=[]; this.pgHist=[];
+    this._reset();
+  }
+  _reset(){ this.belief=M.normalize({math:1,code:1,theory:1}); this.clarified=false; this.searched=false; this.epStep=0; this.epPG=0; this.epRew=0; }
+  startEpisode(obs){ this._reset(); this.nEps++; const prior=this.memory.priorFromMemory(obs); this.belief=this.wm.posterior(prior,obs,false); this.epText=[obs]; }
+  chooseAction(){ return this.policy.computeAll(this.belief,this.wm,this.monitor,this.memory,this.clarified,this.searched,this.epStep); }
+  observe(action,obs,reward,done,info){
+    this.epStep++; this.epRew+=reward;
+    if(action==='ask_clarify'){
+      const mlp=this.wm.mixLogP(obs,this.belief,true);
+      const blp=this.wm.uniformLogP(obs);
+      const pg=mlp-blp;
+      this.epPG+=pg; this.totalPG+=pg; this.nPreds++;
+      this.belief=this.wm.posterior(this.belief,obs,true);
+      this.epText.push(obs); this.clarified=true; this.askCount++;
+    } else if(action==='search_memory'){
+      this.searched=true;
+      const res=this.memory.search(this.epText.join(' '));
+      if(res.length){
+        const votes=M.normalize(res.reduce((o,ep)=>({...o,[ep.intent]:(o[ep.intent]||0)+(ep.correct?1:.3)}),INTENTS.reduce((o,i)=>({...o,[i]:0.01}),{})));
+        for(const i of INTENTS) this.belief[i]=.7*this.belief[i]+.3*votes[i];
+        this.belief=M.normalize(this.belief);
+      }
+    } else if(action==='reflect'){
+      const u=M.normalize(INTENTS.reduce((o,i)=>({...o,[i]:1}),{}));
+      for(const i of INTENTS) this.belief[i]=.85*this.belief[i]+.15*u[i];
+      this.belief=M.normalize(this.belief);
+    } else if(action.startsWith('answer_')){
+      const pred=action.split('_')[1];
+      const correct=info.correct||false;
+      const mlp=obs==='SUCCESS'?Math.log(Math.max(this.belief[pred],1e-9)):Math.log(Math.max(this.belief[info.intent||pred],1e-9));
+      const blp=Math.log(1/3);
+      const pg=mlp-blp;
+      this.epPG+=pg; this.totalPG+=pg; this.nPreds++;
+      this.monitor.record(this.belief[pred],correct);
+      if(correct)this.correctCount++;
+      this.memory.add({text:this.epText.join(' '),intent:info.intent,correct,pg,action});
+    }
+    this.totalReward+=reward;
+    if(done){ this.rewardHist.push(this.epRew); this.pgHist.push(this.epPG); if(this.rewardHist.length>200){this.rewardHist.shift();this.pgHist.shift();} }
+  }
+  metrics(){ return { name:this.name, avgReward:this.totalReward/Math.max(this.nEps,1), avgPG:this.totalPG/Math.max(this.nPreds,1), uafScale:M.uafScale(this.totalPG,this.nPreds), successRate:this.correctCount/Math.max(this.nEps,1), askRate:this.askCount/Math.max(this.nEps,1), selfAcc:this.monitor.accuracy(), calErr:this.monitor.calErr(), penalty:this.monitor.penalty, nEps:this.nEps, totalPG:this.totalPG, nPreds:this.nPreds }; }
+}
+
+class GreedyAgent extends UAFAgent {
+  constructor(wm){ super(wm,'greedy'); }
+  chooseAction(){ const b=INTENTS.reduce((a,i)=>this.belief[i]>this.belief[a]?i:a,INTENTS[0]); return {[`answer_${b}`]:1,...INTENTS.filter(i=>i!==b).reduce((o,i)=>({...o,[`answer_${i}`]:-1}),{})}; }
+}
+
+// ── Episode runner ──────────────────────────────────────────
+function runEp(agent, env, maxSteps=6){
+  const obs=env.reset();
+  agent.startEpisode(obs);
+  let lastAction='';
+  for(let s=0;s<maxSteps;s++){
+    const utils=agent.chooseAction();
+    const action=agent.policy?agent.policy.select(utils):Object.entries(utils).reduce((a,b)=>b[1]>a[1]?b:a)[0];
+    lastAction=action;
+    const[nobs,rew,done,info]=env.step(action);
+    agent.observe(action,nobs,rew,done,info);
+    if(done)break;
+  }
+  return lastAction;
+}
+
+// ── State ───────────────────────────────────────────────────
+const wm=new WorldModel();
+const env1=new Env(wm), env2=new Env(wm);
+const uaf=new UAFAgent(wm,'uaf-omega');
+const greedy=new GreedyAgent(wm);
+const shell=new LLMShell();
+const guard=new HallGuard();
+const noosphere=new Noosphere(4);
+let step=0, running=false, speed=6, timerId=null, logs=[];
+let U=1,T=1,H=.5;
+let pgHistory=[], npgHistory=[];
+
+// ── Simulation step ─────────────────────────────────────────
+function simStep(){
+  step++;
+  // Run UAF episode
+  const uafAction=runEp(uaf,env1);
+  runEp(greedy,env2);
+
+  // Update LLM shell
+  const um=uaf.metrics();
+  const correct=(uaf.rewardHist.at(-1)||0)>0;
+  shell.update(correct,um.selfAcc||.6);
+
+  // Hallucination check
+  const hall=guard.check();
+  if(hall.detected) addLog(`🧠 Hallucination (sev=${hall.severity.toFixed(2)})`, 'r');
+
+  // Noosphere tick
+  noosphere.tick();
+
+  // Update UAF state metrics
+  const surprisal=correct?Math.random()*.3:Math.random()*1.5+.3;
+  H=Math.tanh(surprisal*.8);
+  const resid=.95*(U*.1+.1)+(1-.95)*surprisal;
+  T=Math.max(.3,.5+resid*.8);
+  U=Math.min(surprisal,10);
+
+  pgHistory.push(um.totalPG);
+  if(pgHistory.length>120)pgHistory.shift();
+
+  if(step%5===0){
+    const m=uaf.metrics();
+    addLog(`Step ${step}: reward=${m.avgReward.toFixed(3)}, PG=${m.avgPG.toFixed(3)}, scale=${m.uafScale.toFixed(2)}`, 'm');
+  }
+  if(uafAction==='ask_clarify') addLog('↗ ask_clarify fired', 'c');
+
+  renderAll();
+}
+
+function renderAll(){
+  const um=uaf.metrics(), gm=greedy.metrics();
+
+  // Belief
+  const bf=document.getElementById('bf-grid');
+  bf.innerHTML=INTENTS.map(i=>{
+    const p=uaf.belief[i];
+    return `<div class="bf-row"><span class="bf-label">${i}</span><div class="bf-track"><div class="bf-fill" style="background:${INTENT_COLORS[i]};width:${p*100}%"></div></div><span style="color:${INTENT_COLORS[i]};font-weight:700">${p.toFixed(2)}</span></div>`;
+  }).join('');
+  const topI=INTENTS.reduce((a,b)=>uaf.belief[b]>uaf.belief[a]?b:a,INTENTS[0]);
+  document.getElementById('top-intent').textContent=topI.toUpperCase();
+  document.getElementById('belief-h').textContent=M.entropy(uaf.belief).toFixed(3);
+  document.getElementById('residuum').textContent=(U*.1+.1).toFixed(3);
+
+  // Action utils
+  const utils=uaf.policy.computeAll(uaf.belief,wm,uaf.monitor,uaf.memory,uaf.clarified,uaf.searched,uaf.epStep);
+  const maxU=Math.max(...Object.values(utils).filter(v=>v>-1e8));
+  const minU=Math.min(...Object.values(utils).filter(v=>v>-1e8));
+  const rng=Math.max(maxU-minU,.001);
+  const chosen=Object.entries(utils).reduce((a,b)=>b[1]>a[1]?b:a)[0];
+  document.getElementById('chosen-action').textContent=chosen;
+  const at=document.getElementById('act-table');
+  at.innerHTML=ACTIONS.map(a=>{
+    const u=utils[a];
+    if(u<-1e8)return'';
+    const pct=Math.max(0,(u-minU)/rng*100);
+    const col=a===chosen?COLORS.cyan:COLORS.muted;
+    return `<div class="act-row ${a===chosen?'chosen':''}"><span class="act-name" style="color:${col}">${a}</span><div class="act-bar-wrap"><div class="act-bar" style="width:${pct}%;background:${col}"></div></div><span class="act-val" style="color:${col}">${u.toFixed(3)}</span></div>`;
+  }).join('');
+
+  // UAF Scale
+  const sc=um.uafScale;
+  const pct=((sc+3)/6)*100;
+  document.getElementById('scale-thumb').style.left=pct+'%';
+  document.getElementById('scale-num').textContent=sc.toFixed(2);
+  document.getElementById('scale-desc').textContent=scaleLabel(sc);
+  document.getElementById('npg-total').textContent=um.totalPG.toFixed(1);
+  document.getElementById('n-preds').textContent=um.nPreds;
+
+  // PG chart
+  drawLineChart('c-pg',pgHistory,'#2ecc71',true);
+  document.getElementById('avg-pg').textContent=`avg PG: ${um.avgPG.toFixed(4)}`;
+
+  // FE decomp
+  const F=M.freeEnergy(U,T,H);
+  document.getElementById('fe-val').textContent=F.toFixed(4);
+  document.getElementById('fe-U').textContent=U.toFixed(4);
+  document.getElementById('fe-T').textContent=T.toFixed(3);
+  document.getElementById('fe-H').textContent=H.toFixed(4);
+  document.getElementById('fe-F').textContent=F.toFixed(4);
+  document.getElementById('bar-U').style.width=Math.min(100,U*15)+'%';
+  document.getElementById('bar-T').style.width=Math.min(100,T*60)+'%';
+  document.getElementById('bar-H').style.width=(H*100)+'%';
+  const fp=((F+2)/6*100);
+  document.getElementById('bar-F').style.width=Math.max(0,Math.min(100,fp))+'%';
+
+  // Self monitor
+  document.getElementById('self-acc').textContent=(um.selfAcc*100).toFixed(1)+'%';
+  document.getElementById('sm-penalty').textContent=um.penalty.toFixed(3);
+  document.getElementById('bar-penalty').style.width=(um.penalty/0.45*100)+'%';
+  document.getElementById('sm-cal').textContent=um.calErr.toFixed(3);
+  document.getElementById('sm-conf').textContent=uaf.monitor.avgConf().toFixed(3);
+  document.getElementById('sm-eps').textContent=um.nEps;
+  document.getElementById('sm-ask').textContent=(um.askRate*100).toFixed(1)+'%';
+
+  // Comparison
+  drawComparison();
+  const delta=um.avgReward-gm.avgReward;
+  document.getElementById('vs-delta').textContent=`Δ reward: ${delta>0?'+':''}${delta.toFixed(4)}`;
+  document.getElementById('uaf-reward').textContent=um.avgReward.toFixed(4);
+  document.getElementById('uaf-sr').textContent=`success: ${(um.successRate*100).toFixed(1)}%`;
+  document.getElementById('g-reward').textContent=gm.avgReward.toFixed(4);
+  document.getElementById('g-sr').textContent=`success: ${(gm.successRate*100).toFixed(1)}%`;
+
+  // LLM Shell
+  const modeColors={llm_raw:COLORS.blue,conservative:COLORS.orange,synthesis:COLORS.green};
+  const modeClasses={llm_raw:'mode-raw',conservative:'mode-cons',synthesis:'mode-synth'};
+  const badge=document.getElementById('mode-badge');
+  badge.textContent=shell.mode;
+  badge.className='mode-badge '+modeClasses[shell.mode];
+  for(const[mode,id]of[['llm_raw','raw'],['conservative','cons'],['synthesis','synth']]){
+    document.getElementById(`trust-${id}`).textContent=shell.modeTrust[mode].toFixed(2);
+    document.getElementById(`bar-t${id}`).style.width=(shell.modeTrust[mode]*100)+'%';
+  }
+  document.getElementById('dialectic-cnt').textContent=shell.dialecticCount;
+  document.getElementById('consec-fail').textContent=shell.consecFails;
+
+  // Noosphere
+  drawNoosphere();
+  const last=noosphere.history.at(-1);
+  if(last) document.getElementById('ns-consensus').textContent=
+    `consensus: ${INTENTS.map(i=>`${i}=${last.consensus[i].toFixed(2)}`).join(' ')}`;
+
+  // Hallucination
+  const hallRows=document.getElementById('hall-rows');
+  hallRows.innerHTML=guard.records.slice(-8).reverse().map((r,i)=>`
+    <div class="hall-row">
+      <span>ep ${guard.records.length-i}</span>
+      <span style="color:${r.consistency>.7?COLORS.green:COLORS.orange}">${r.consistency.toFixed(2)}</span>
+      <span style="color:${r.severity<.3?COLORS.green:COLORS.red}">${r.severity.toFixed(2)}</span>
+      <span style="color:${r.detected?COLORS.red:COLORS.green}">${r.detected?'⚠':'✓'}</span>
+    </div>`).join('');
+  document.getElementById('hall-total').textContent=`${guard.records.filter(r=>r.detected).length} detected`;
+
+  // Reward history
+  drawLineChart('c-rew',uaf.rewardHist.slice(-60),'#2ecc71',false,true);
+  const avgR=uaf.rewardHist.length?uaf.rewardHist.slice(-20).reduce((s,v)=>s+v,0)/Math.min(uaf.rewardHist.length,20):0;
+  document.getElementById('avg-rew-lbl').textContent=`avg: ${avgR.toFixed(3)}`;
+
+  // Step counter
+  document.getElementById('step-ctr').textContent=`step ${step} | eps ${um.nEps}`;
+}
+
+// ── Draw helpers ────────────────────────────────────────────
+function drawLineChart(id,data,color,fill=false,zeroLine=false){
+  const c=document.getElementById(id);
+  c.width=c.offsetWidth; c.height=c.offsetHeight;
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  if(data.length<2)return;
+  const mn=Math.min(...data), mx=Math.max(...data);
+  const rng=Math.max(mx-mn,.001), pad=8;
+  const mapX=i=>pad+(i/(data.length-1))*(W-pad*2);
+  const mapY=v=>pad+(1-(v-mn)/rng)*(H-pad*2);
+  if(zeroLine&&mn<0){
+    const zy=mapY(0);
+    ctx.beginPath(); ctx.moveTo(0,zy); ctx.lineTo(W,zy);
+    ctx.strokeStyle='rgba(255,255,255,.08)'; ctx.lineWidth=1; ctx.stroke();
+  }
+  if(fill){
+    ctx.beginPath();
+    data.forEach((v,i)=>i===0?ctx.moveTo(mapX(i),mapY(v)):ctx.lineTo(mapX(i),mapY(v)));
+    ctx.lineTo(W-pad,H-pad); ctx.lineTo(pad,H-pad); ctx.closePath();
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,color+'33'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.fill();
+  }
+  ctx.beginPath();
+  data.forEach((v,i)=>i===0?ctx.moveTo(mapX(i),mapY(v)):ctx.lineTo(mapX(i),mapY(v)));
+  ctx.strokeStyle=color; ctx.lineWidth=1.8; ctx.stroke();
+}
+
+function drawComparison(){
+  const c=document.getElementById('c-vs');
+  c.width=c.offsetWidth; c.height=c.offsetHeight;
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  const uafH=uaf.rewardHist.slice(-80), gH=greedy.rewardHist.slice(-80);
+  if(uafH.length<2)return;
+  const all=[...uafH,...gH];
+  const mn=Math.min(...all), mx=Math.max(...all), rng=Math.max(mx-mn,.001), pad=8;
+  const mapY=v=>pad+(1-(v-mn)/rng)*(H-pad*2);
+  [uafH,gH].forEach((data,idx)=>{
+    const color=idx===0?COLORS.green:COLORS.red;
+    ctx.beginPath();
+    data.forEach((v,i)=>{
+      const x=pad+(i/(Math.max(data.length-1,1)))*(W-pad*2);
+      const y=mapY(v);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.strokeStyle=color; ctx.lineWidth=1.5; ctx.stroke();
+  });
+  ctx.font='8px JetBrains Mono';
+  ctx.fillStyle=COLORS.green; ctx.fillText('UAF-Ω',8,16);
+  ctx.fillStyle=COLORS.red; ctx.fillText('Greedy',8,28);
+}
+
+function drawNoosphere(){
+  const c=document.getElementById('c-noosphere');
+  c.width=c.offsetWidth; c.height=c.offsetHeight;
+  const ctx=c.getContext('2d');
+  const W=c.width,H=c.height;
+  ctx.clearRect(0,0,W,H);
+  const n=noosphere.n, cx=W/2, cy=H/2, r=Math.min(W,H)*0.3;
+  const positions=noosphere.agents.map((_,i)=>{
+    const a=(i/n)*Math.PI*2-Math.PI/2;
+    return{x:cx+Math.cos(a)*r, y:cy+Math.sin(a)*r};
+  });
+  // Edges
+  for(let i=0;i<n;i++) for(let j=i+1;j<n;j++){
+    const t=(noosphere.trust[i][j]+noosphere.trust[j][i])/2;
+    if(t<.2)continue;
+    const g=ctx.createLinearGradient(positions[i].x,positions[i].y,positions[j].x,positions[j].y);
+    g.addColorStop(0,noosphere.agents[i].color+(Math.floor(t*180)).toString(16).padStart(2,'0'));
+    g.addColorStop(1,noosphere.agents[j].color+(Math.floor(t*180)).toString(16).padStart(2,'0'));
+    ctx.beginPath(); ctx.moveTo(positions[i].x,positions[i].y); ctx.lineTo(positions[j].x,positions[j].y);
+    ctx.strokeStyle=g; ctx.lineWidth=t*2; ctx.stroke();
+  }
+  // Nodes
+  noosphere.agents.forEach((a,i)=>{
+    const{x,y}=positions[i];
+    const rd=ctx.createRadialGradient(x,y,0,x,y,24);
+    rd.addColorStop(0,a.color+'33'); rd.addColorStop(1,'transparent');
+    ctx.beginPath(); ctx.arc(x,y,24,0,Math.PI*2); ctx.fillStyle=rd; ctx.fill();
+    ctx.beginPath(); ctx.arc(x,y,12,0,Math.PI*2); ctx.fillStyle='#0b0f18'; ctx.fill();
+    ctx.strokeStyle=a.color; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.beginPath(); ctx.arc(x,y,4+a.pg*6,0,Math.PI*2);
+    ctx.fillStyle=a.color+'aa'; ctx.fill();
+    ctx.fillStyle=a.color; ctx.font='9px JetBrains Mono'; ctx.textAlign='center';
+    ctx.fillText(a.name,x,y+26); ctx.fillText(`PG:${a.pg.toFixed(2)}`,x,y+36);
+    // Belief as mini bars
+    INTENTS.forEach((k,ki)=>{
+      const bx=x-18+ki*12; const bh=a.belief[k]*20;
+      ctx.fillStyle=[COLORS.blue,COLORS.green,COLORS.purple][ki]+'88';
+      ctx.fillRect(bx,y-40,8,bh);
+    });
+    ctx.textAlign='left';
+  });
+  // Consensus
+  const last=noosphere.history.at(-1);
+  if(last){
+    ctx.fillStyle='rgba(255,255,255,.5)'; ctx.font='8px JetBrains Mono';
+    ctx.fillText(`DP: ${last.dp.toFixed(3)}`,8,16);
+  }
+}
+
+// ── Controls ────────────────────────────────────────────────
+function scaleLabel(s){
+  const r=Math.round(s);
+  return({3:'уникальное предсказание',2:'лучше всех доступных',1:'лучше базовой',0:'как случайность','-1':'хуже базовой','-2':'системно ошибается','-3':'анти-предсказание'})[String(r)]||`${s.toFixed(2)}`;
+}
+function addLog(msg,cls=''){
+  logs.unshift({t:step,msg,cls});
+  if(logs.length>60)logs.pop();
+  document.getElementById('log').innerHTML=logs.slice(0,14).map(l=>`<div class="le"><span class="lt">[${String(l.t).padStart(5,'0')}]</span><span class="lm ${l.cls||''}">${l.msg}</span></div>`).join('');
+}
+function scheduleNext(){
+  if(!running)return;
+  const delay=Math.max(16,Math.round(800/speed));
+  timerId=setTimeout(()=>{ simStep(); scheduleNext(); },delay);
+}
+function toggleRun(){
+  running=!running;
+  document.getElementById('btn-run').textContent=running?'⏸ ПАУЗА':'▶ ЗАПУСК';
+  if(running){addLog('▶ Запущен','c');scheduleNext();}
+  else{clearTimeout(timerId);addLog('⏸ Пауза');}
+}
+function injectAnomaly(){
+  for(const i of INTENTS) uaf.belief[i]=Math.random();
+  uaf.belief=M.normalize(uaf.belief);
+  uaf.monitor.record(.9,false);
+  uaf.monitor.record(.85,false);
+  shell.consecFails+=2;
+  if(shell.consecFails>=shell.failThreshold)shell._switch();
+  addLog(`⚡ Аномалия: belief сброшен, monitors stressed`,'r');
+  renderAll();
+}
+function runEpisodeManual(){
+  runEp(uaf,env1); runEp(greedy,env2); step++;
+  addLog(`▷ Ручной эпизод #${uaf.metrics().nEps}`,'o');
+  renderAll();
+}
+function forceHallucination(){
+  guard.records.push({consistency:.2,severity:.85,detected:true});
+  shell.consecFails=shell.failThreshold;
+  shell._switch();
+  addLog('🧠 Forced hallucination → dialectic switch','r');
+  renderAll();
+}
+function resetAll(){
+  running=false; clearTimeout(timerId);
+  document.getElementById('btn-run').textContent='▶ ЗАПУСК';
+  step=0; logs=[]; pgHistory=[];
+  Object.assign(uaf,new UAFAgent(wm,'uaf-omega'));
+  Object.assign(greedy,new GreedyAgent(wm));
+  Object.assign(shell,new LLMShell());
+  Object.assign(guard,new HallGuard());
+  addLog('↺ Сброс. Нажмите ▶ ЗАПУСК','c');
+  renderAll();
+}
+document.getElementById('spd').addEventListener('input',function(){
+  speed=+this.value; document.getElementById('spd-lbl').textContent=this.value+'×';
+});
+window.addEventListener('resize',renderAll);
+// Boot
+addLog('UAF-Ω Dashboard инициализирован','c');
+addLog('Формула: PG = log[M(obs|belief) / M₀(obs)] — после obs');
+renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,1352 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PHASE 5: UAF Noosphere — Multimodal Agent System</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #04060a;
+    --surface: #0b0f18;
+    --border: #1a2035;
+    --glow-blue: #00d4ff;
+    --glow-purple: #9b59b6;
+    --glow-orange: #ff6b35;
+    --glow-green: #00ff88;
+    --glow-red: #ff3366;
+    --text: #c8d6ef;
+    --muted: #4a5568;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px;
+  }
+
+  /* HEADER */
+  .header {
+    border: 1px solid var(--border);
+    background: linear-gradient(135deg, #0b0f18 0%, #0f1525 100%);
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--glow-blue), var(--glow-purple), transparent);
+  }
+
+  .phase-badge {
+    display: inline-block;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid var(--glow-blue);
+    color: var(--glow-blue);
+    font-size: 10px;
+    letter-spacing: 3px;
+    padding: 4px 12px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+  }
+
+  .header h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #fff 0%, var(--glow-blue) 50%, var(--glow-purple) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+    margin-bottom: 8px;
+  }
+
+  .header .subtitle {
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+
+  /* STATUS BAR */
+  .status-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 6px 14px;
+    font-size: 11px;
+  }
+
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* MAIN GRID */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+  }
+
+  .panel.blue::before { background: linear-gradient(90deg, transparent, var(--glow-blue), transparent); }
+  .panel.purple::before { background: linear-gradient(90deg, transparent, var(--glow-purple), transparent); }
+  .panel.orange::before { background: linear-gradient(90deg, transparent, var(--glow-orange), transparent); }
+  .panel.green::before { background: linear-gradient(90deg, transparent, var(--glow-green), transparent); }
+  .panel.red::before { background: linear-gradient(90deg, transparent, var(--glow-red), transparent); }
+
+  .panel-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .panel-title {
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .panel-value {
+    font-size: 14px;
+    font-weight: 700;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .panel-body { padding: 16px; }
+
+  /* NOOSPHERE CANVAS */
+  .noosphere-panel {
+    grid-column: span 2;
+    grid-row: span 2;
+  }
+
+  canvas { display: block; }
+
+  /* METRICS */
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .metric-row:last-child { border-bottom: none; }
+
+  .metric-label { color: var(--muted); font-size: 10px; }
+
+  .metric-val {
+    font-weight: 700;
+    font-size: 13px;
+  }
+
+  .bar-container {
+    width: 100%;
+    height: 4px;
+    background: rgba(255,255,255,0.05);
+    margin-top: 4px;
+  }
+
+  .bar-fill {
+    height: 100%;
+    transition: width 0.5s ease;
+  }
+
+  /* LOG PANEL */
+  .log-panel {
+    grid-column: span 3;
+  }
+
+  .log-body {
+    height: 120px;
+    overflow-y: auto;
+    padding: 12px 16px;
+    font-size: 10px;
+    line-height: 1.8;
+  }
+
+  .log-body::-webkit-scrollbar { width: 3px; }
+  .log-body::-webkit-scrollbar-track { background: transparent; }
+  .log-body::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .log-entry { display: flex; gap: 12px; }
+  .log-time { color: var(--muted); min-width: 60px; }
+  .log-msg { color: var(--text); }
+  .log-val { margin-left: auto; }
+
+  /* CONTROLS */
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .btn {
+    background: transparent;
+    border: 1px solid;
+    color: inherit;
+    padding: 8px 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .btn:hover::after { opacity: 0.1; }
+  .btn:hover { transform: translateY(-1px); }
+  .btn:active { transform: translateY(0); }
+
+  .btn-blue { border-color: var(--glow-blue); color: var(--glow-blue); }
+  .btn-blue::after { background: var(--glow-blue); }
+
+  .btn-orange { border-color: var(--glow-orange); color: var(--glow-orange); }
+  .btn-orange::after { background: var(--glow-orange); }
+
+  .btn-green { border-color: var(--glow-green); color: var(--glow-green); }
+  .btn-green::after { background: var(--glow-green); }
+
+  .btn-red { border-color: var(--glow-red); color: var(--glow-red); }
+  .btn-red::after { background: var(--glow-red); }
+
+  .speed-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--muted);
+    font-size: 11px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 80px;
+    height: 2px;
+    background: var(--border);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--glow-blue);
+    cursor: pointer;
+  }
+
+  /* PHILOSOPHY FORMULA */
+  .formula-panel {
+    grid-column: span 1;
+  }
+
+  .formula {
+    font-size: 10px;
+    line-height: 1.9;
+    padding: 4px 0;
+  }
+
+  .formula-line {
+    display: flex;
+    gap: 6px;
+    align-items: baseline;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    transition: background 0.2s;
+  }
+
+  .formula-line:hover { background: rgba(255,255,255,0.02); }
+  .formula-sym { min-width: 24px; }
+
+  /* MODALITY BARS */
+  .modality-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .modality-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid var(--border);
+    padding: 10px;
+  }
+
+  .modality-name {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+
+  .modality-fe {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+
+  /* MINI LINE CHART */
+  .sparkline { display: block; }
+
+  /* BOTTOM SUMMARY */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .summary-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px;
+    text-align: center;
+  }
+
+  .summary-number {
+    font-family: 'Syne', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .summary-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* PHASE TIMELINE */
+  .timeline {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+
+  .timeline-title {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  .timeline-steps {
+    display: flex;
+    gap: 0;
+    position: relative;
+  }
+
+  .timeline-steps::before {
+    content: '';
+    position: absolute;
+    top: 12px;
+    left: 0; right: 0;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .timeline-step {
+    flex: 1;
+    text-align: center;
+    position: relative;
+  }
+
+  .timeline-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    margin: 8px auto;
+    position: relative;
+    z-index: 1;
+  }
+
+  .timeline-dot.done { background: var(--glow-green); }
+  .timeline-dot.active { background: var(--glow-blue); animation: pulse 1s infinite; }
+  .timeline-dot.pending { background: var(--border); border: 1px solid var(--muted); }
+
+  .timeline-label { font-size: 9px; color: var(--muted); }
+  .timeline-phase { font-size: 8px; color: var(--muted); margin-bottom: 2px; }
+
+  /* SCROLLBAR GLOBAL */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+
+  .glow-blue { color: var(--glow-blue); }
+  .glow-purple { color: var(--glow-purple); }
+  .glow-orange { color: var(--glow-orange); }
+  .glow-green { color: var(--glow-green); }
+  .glow-red { color: var(--glow-red); }
+
+  .separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+    margin: 0 4px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="phase-badge">Phase 5 · Активна</div>
+    <h1>UAF NOOSPHERE ENGINE<br>Multimodal Self-Learning System</h1>
+    <div class="subtitle">
+      F = D_KL[Q(w) ‖ P(w|E)] − log P(E) · Friston Free Energy · Predictive Coding · Multi-Agent Consensus
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-pill">
+      <div class="status-dot" style="background:var(--glow-green)"></div>
+      <span id="status-text">Инициализация...</span>
+    </div>
+    <div class="status-pill">
+      <span class="glow-blue">STEP</span>
+      <span id="step-counter">0</span>
+    </div>
+    <div class="status-pill">
+      <span class="glow-purple">АГЕНТОВ</span>
+      <span>7</span>
+    </div>
+    <div class="status-pill">
+      <span class="glow-orange">МОДАЛЬНОСТЕЙ</span>
+      <span>4</span>
+    </div>
+    <div class="status-pill">
+      <span class="glow-green">НООСФЕРА</span>
+      <span id="noosphere-pct">0%</span>
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <button class="btn btn-blue" id="btn-start" onclick="toggleRun()">▶ ЗАПУСК</button>
+    <button class="btn btn-orange" onclick="resetAll()">↺ СБРОС</button>
+    <button class="btn btn-green" onclick="addAgent()">+ АГЕНТ</button>
+    <button class="btn btn-red" onclick="injectNoise()">⚡ ШУМ</button>
+    <div class="separator"></div>
+    <div class="speed-control">
+      <span>СКОРОСТЬ</span>
+      <input type="range" id="speed" min="1" max="20" value="8">
+      <span id="speed-val">8×</span>
+    </div>
+  </div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- NOOSPHERE CANVAS — 2x2 -->
+    <div class="panel blue noosphere-panel">
+      <div class="panel-header">
+        <span class="panel-title">Ноосфера · Граф агентов & доверие</span>
+        <span class="panel-value glow-blue" id="consensus-val">—</span>
+      </div>
+      <div class="panel-body" style="padding:0">
+        <canvas id="noosphere-canvas" width="700" height="320"></canvas>
+      </div>
+    </div>
+
+    <!-- FREE ENERGY PANEL -->
+    <div class="panel purple">
+      <div class="panel-header">
+        <span class="panel-title">Свободная энергия (F)</span>
+        <span class="panel-value glow-purple" id="fe-val">—</span>
+      </div>
+      <div class="panel-body">
+        <canvas id="fe-chart" width="280" height="120"></canvas>
+        <div style="margin-top:12px">
+          <div class="metric-row">
+            <span class="metric-label">Температура T</span>
+            <span class="metric-val glow-purple" id="temp-val">1.000</span>
+          </div>
+          <div class="bar-container"><div class="bar-fill" id="temp-bar" style="background:var(--glow-purple);width:100%"></div></div>
+          <div class="metric-row" style="margin-top:8px">
+            <span class="metric-label">Энтропия H</span>
+            <span class="metric-val glow-purple" id="entropy-val">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Энергия U</span>
+            <span class="metric-val glow-purple" id="energy-val">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODALITIES PANEL -->
+    <div class="panel orange">
+      <div class="panel-header">
+        <span class="panel-title">Модальности</span>
+        <span class="panel-value glow-orange" id="best-modality">—</span>
+      </div>
+      <div class="panel-body">
+        <div class="modality-grid">
+          <div class="modality-card">
+            <div class="modality-name glow-blue">Текст (LLM)</div>
+            <div class="modality-fe glow-blue" id="mod-text">—</div>
+            <div class="bar-container"><div class="bar-fill" id="bar-text" style="background:var(--glow-blue)"></div></div>
+          </div>
+          <div class="modality-card">
+            <div class="modality-name glow-purple">Зрение (ViT)</div>
+            <div class="modality-fe glow-purple" id="mod-vision">—</div>
+            <div class="bar-container"><div class="bar-fill" id="bar-vision" style="background:var(--glow-purple)"></div></div>
+          </div>
+          <div class="modality-card">
+            <div class="modality-name glow-orange">Граф (GNN)</div>
+            <div class="modality-fe glow-orange" id="mod-graph">—</div>
+            <div class="bar-container"><div class="bar-fill" id="bar-graph" style="background:var(--glow-orange)"></div></div>
+          </div>
+          <div class="modality-card">
+            <div class="modality-name glow-green">RL Agent</div>
+            <div class="modality-fe glow-green" id="mod-rl">—</div>
+            <div class="bar-container"><div class="bar-fill" id="bar-rl" style="background:var(--glow-green)"></div></div>
+          </div>
+        </div>
+        <div style="margin-top:10px; font-size:9px; color:var(--muted)">
+          FE = U − T·H (меньше = лучше предсказание)
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end main-grid -->
+
+  <!-- SECOND ROW -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">
+
+    <!-- BAYESIAN UPDATE -->
+    <div class="panel blue">
+      <div class="panel-header">
+        <span class="panel-title">Байесовское обновление</span>
+        <span class="panel-value glow-blue" id="bayes-val">—</span>
+      </div>
+      <div class="panel-body">
+        <canvas id="bayes-chart" width="280" height="110"></canvas>
+        <div style="margin-top:8px">
+          <div class="metric-row">
+            <span class="metric-label">Prior P(M)</span>
+            <span class="metric-val" id="prior-val">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Posterior P(M|E)</span>
+            <span class="metric-val glow-blue" id="posterior-val">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Likelihood</span>
+            <span class="metric-val" id="likelihood-val">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HEGEL DIALECTIC -->
+    <div class="panel purple">
+      <div class="panel-header">
+        <span class="panel-title">Диалектика Гегеля</span>
+        <span class="panel-value glow-purple" id="hegel-step">ТЕЗИС</span>
+      </div>
+      <div class="panel-body">
+        <div class="formula">
+          <div class="formula-line">
+            <span class="formula-sym glow-blue">M₀</span>
+            <span style="color:var(--muted)">→ Тезис (начальная модель)</span>
+          </div>
+          <div class="formula-line">
+            <span class="formula-sym glow-red">R</span>
+            <span style="color:var(--muted)">→ Антитезис (аномалии)</span>
+          </div>
+          <div class="formula-line">
+            <span class="formula-sym glow-green">M₁</span>
+            <span style="color:var(--muted)">→ Синтез (новая модель)</span>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <div class="metric-row">
+            <span class="metric-label">Резидуум |R(t)|</span>
+            <span class="metric-val glow-red" id="residuum-val">—</span>
+          </div>
+          <div class="bar-container"><div class="bar-fill" id="residuum-bar" style="background:var(--glow-red)"></div></div>
+          <div class="metric-row" style="margin-top:8px">
+            <span class="metric-label">D_KL (M‖M₀)</span>
+            <span class="metric-val glow-purple" id="dkl-val">—</span>
+          </div>
+          <div class="metric-row">
+            <span class="metric-label">Aufhebung-цикл</span>
+            <span class="metric-val glow-green" id="aufhebung-val">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KANT CATEGORIES -->
+    <div class="panel green">
+      <div class="panel-header">
+        <span class="panel-title">Категории Канта</span>
+        <span class="panel-value glow-green" id="kant-active">—</span>
+      </div>
+      <div class="panel-body">
+        <div id="kant-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:9px"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- LOG -->
+  <div class="panel blue" style="margin-bottom:16px">
+    <div class="panel-header">
+      <span class="panel-title">Системный лог</span>
+      <span class="panel-value" style="font-size:10px;color:var(--muted)" id="log-count">0 событий</span>
+    </div>
+    <div class="log-body" id="log-body"></div>
+  </div>
+
+  <!-- PHASE TIMELINE -->
+  <div class="timeline">
+    <div class="timeline-title">Прогресс исследования</div>
+    <div class="timeline-steps">
+      <div class="timeline-step">
+        <div class="timeline-phase">Phase 1</div>
+        <div class="timeline-dot done"></div>
+        <div class="timeline-label glow-green">LLM +37%</div>
+      </div>
+      <div class="timeline-step">
+        <div class="timeline-phase">Phase 2</div>
+        <div class="timeline-dot done"></div>
+        <div class="timeline-label glow-green">Реальные дистр.</div>
+      </div>
+      <div class="timeline-step">
+        <div class="timeline-phase">Phase 3</div>
+        <div class="timeline-dot done"></div>
+        <div class="timeline-label glow-green">WikiText-103</div>
+      </div>
+      <div class="timeline-step">
+        <div class="timeline-phase">Phase 4</div>
+        <div class="timeline-dot done"></div>
+        <div class="timeline-label glow-green">Vision ViT</div>
+      </div>
+      <div class="timeline-step">
+        <div class="timeline-phase">Phase 5</div>
+        <div class="timeline-dot active"></div>
+        <div class="timeline-label glow-blue">Multimodal ←</div>
+      </div>
+      <div class="timeline-step">
+        <div class="timeline-phase">Phase 6</div>
+        <div class="timeline-dot pending"></div>
+        <div class="timeline-label">RL</div>
+      </div>
+      <div class="timeline-step">
+        <div class="timeline-phase">Phase 7</div>
+        <div class="timeline-dot pending"></div>
+        <div class="timeline-label">Publication</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUMMARY CARDS -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <span class="summary-number glow-green" id="sum-improvement">—</span>
+      <span class="summary-label">Прирост FE</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-number glow-blue" id="sum-steps">0</span>
+      <span class="summary-label">Шагов обучения</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-number glow-purple" id="sum-agents">7</span>
+      <span class="summary-label">Агентов в сети</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-number glow-orange" id="sum-aufhebung">0</span>
+      <span class="summary-label">Aufhebung-цикл</span>
+    </div>
+    <div class="summary-card">
+      <span class="summary-number glow-red" id="sum-anomalies">0</span>
+      <span class="summary-label">Аномалий</span>
+    </div>
+  </div>
+
+</div><!-- end container -->
+
+<script>
+// ============================================================
+// UAF NOOSPHERE ENGINE — PHASE 5
+// ============================================================
+
+const state = {
+  running: false,
+  step: 0,
+  speed: 8,
+  intervalId: null,
+  aufhebung: 0,
+  anomalies: 0,
+  initFE: null,
+  
+  // AGENTS (Noosphere)
+  agents: [],
+  nAgents: 7,
+  
+  // MODALITIES
+  modalities: {
+    text:   { fe: 3.5, history: [], temp: 1.0, color: '#00d4ff' },
+    vision: { fe: 3.8, history: [], temp: 1.0, color: '#9b59b6' },
+    graph:  { fe: 4.2, history: [], temp: 1.0, color: '#ff6b35' },
+    rl:     { fe: 5.0, history: [], temp: 1.0, color: '#00ff88' },
+  },
+  
+  // FE history
+  feHistory: [],
+  maxHistory: 120,
+  
+  // Bayesian
+  prior: 0.5,
+  posterior: 0.5,
+  likelihood: 1.0,
+  
+  // Hegel
+  residuum: 0.5,
+  dkl: 1.0,
+  hegelPhase: 'ТЕЗИС',
+  
+  // Kant categories
+  kantValues: {
+    'Причинность': 0.7,
+    'Необходимость': 0.5,
+    'Возможность': 0.8,
+    'Единство': 0.6,
+    'Реальность': 0.9,
+    'Ограничение': 0.4,
+    'Субстанция': 0.65,
+    'Действительность': 0.75,
+  },
+  
+  // Logs
+  logs: [],
+  maxLogs: 100,
+};
+
+// ============================================================
+// INIT AGENTS
+function initAgents(n) {
+  const agents = [];
+  const cx = 350, cy = 160, r = 110;
+  for (let i = 0; i < n; i++) {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    const radius = r + (Math.random() - 0.5) * 30;
+    agents.push({
+      id: i,
+      x: cx + Math.cos(angle) * radius,
+      y: cy + Math.sin(angle) * radius,
+      vx: 0, vy: 0,
+      model: Array.from({length: 16}, () => Math.random()),
+      trust: Array.from({length: n}, (_, j) => i === j ? 0 : Math.random() * 0.4 + 0.1),
+      pg: Math.random() * 0.5 + 0.3, // predictive gain
+      label: ['LLM', 'ViT', 'GNN', 'RL', 'Kant', 'Hegel', 'Bayesian', 'Turing', 'Shannon'][i] || `A${i}`,
+      color: ['#00d4ff','#9b59b6','#ff6b35','#00ff88','#ff3366','#ffd700','#00b4d8','#e040fb','#69f0ae'][i] || '#fff',
+      dead: false,
+    });
+  }
+  return agents;
+}
+
+// ============================================================
+// NOOSPHERE CANVAS
+function drawNoosphere() {
+  const canvas = document.getElementById('noosphere-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  
+  ctx.clearRect(0, 0, W, H);
+  
+  // Background
+  ctx.fillStyle = 'rgba(11,15,24,0.95)';
+  ctx.fillRect(0, 0, W, H);
+  
+  const agents = state.agents;
+  if (!agents.length) return;
+  
+  // Draw edges (trust connections)
+  agents.forEach((a, i) => {
+    agents.forEach((b, j) => {
+      if (i >= j || a.dead || b.dead) return;
+      const trust = a.trust[j];
+      if (trust < 0.2) return;
+      
+      const alpha = Math.min(trust * 0.8, 0.6);
+      const width = trust * 2;
+      
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      
+      // Curved lines
+      const mx = (a.x + b.x) / 2 + (Math.random() - 0.5) * 0;
+      const my = (a.y + b.y) / 2 + (Math.random() - 0.5) * 0;
+      ctx.quadraticCurveTo(mx, my, b.x, b.y);
+      
+      // Gradient edge
+      const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
+      grad.addColorStop(0, a.color + Math.floor(alpha * 255).toString(16).padStart(2,'0'));
+      grad.addColorStop(1, b.color + Math.floor(alpha * 255).toString(16).padStart(2,'0'));
+      ctx.strokeStyle = grad;
+      ctx.lineWidth = width;
+      ctx.stroke();
+    });
+  });
+  
+  // Draw particles on edges (communication flow)
+  if (state.step % 2 === 0) {
+    agents.forEach((a, i) => {
+      agents.forEach((b, j) => {
+        if (i >= j || a.dead || b.dead) return;
+        if (a.trust[j] < 0.3) return;
+        
+        const t = ((state.step * 0.05 + i * 0.3 + j * 0.17) % 1);
+        const px = a.x + (b.x - a.x) * t;
+        const py = a.y + (b.y - a.y) * t;
+        
+        ctx.beginPath();
+        ctx.arc(px, py, 2, 0, Math.PI * 2);
+        ctx.fillStyle = a.color;
+        ctx.fill();
+      });
+    });
+  }
+  
+  // Draw agents
+  agents.forEach(a => {
+    if (a.dead) return;
+    
+    // Glow
+    const glow = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, 28);
+    glow.addColorStop(0, a.color + '33');
+    glow.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 28, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+    
+    // Circle
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 14, 0, Math.PI * 2);
+    ctx.fillStyle = '#0b0f18';
+    ctx.fill();
+    ctx.strokeStyle = a.color;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    
+    // Inner dot (PG indicator)
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, 4 + a.pg * 6, 0, Math.PI * 2);
+    ctx.fillStyle = a.color + 'aa';
+    ctx.fill();
+    
+    // Label
+    ctx.fillStyle = '#c8d6ef';
+    ctx.font = '9px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(a.label, a.x, a.y + 26);
+    
+    // PG value
+    ctx.fillStyle = a.color;
+    ctx.font = '8px JetBrains Mono';
+    ctx.fillText(`PG:${a.pg.toFixed(2)}`, a.x, a.y + 36);
+  });
+  
+  // Consensus indicator
+  const avgPG = agents.filter(a=>!a.dead).reduce((s,a)=>s+a.pg,0) / agents.filter(a=>!a.dead).length;
+  const pct = Math.min(avgPG, 1);
+  document.getElementById('consensus-val').textContent = `Консенсус: ${(pct*100).toFixed(0)}%`;
+  document.getElementById('noosphere-pct').textContent = `${(pct*100).toFixed(0)}%`;
+}
+
+// ============================================================
+// FE CHART
+function drawFEChart() {
+  const canvas = document.getElementById('fe-chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  
+  const hist = state.feHistory;
+  if (hist.length < 2) return;
+  
+  const min = Math.min(...hist);
+  const max = Math.max(...hist) + 0.01;
+  const pad = 8;
+  
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad + (H - pad*2) * (i/4);
+    ctx.beginPath(); ctx.moveTo(pad, y); ctx.lineTo(W-pad, y); ctx.stroke();
+  }
+  
+  // Fill
+  ctx.beginPath();
+  hist.forEach((v, i) => {
+    const x = pad + (i / (hist.length-1)) * (W - pad*2);
+    const y = pad + (1 - (v - min)/(max - min)) * (H - pad*2);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(W-pad, H-pad);
+  ctx.lineTo(pad, H-pad);
+  ctx.closePath();
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#9b59b644');
+  grad.addColorStop(1, 'transparent');
+  ctx.fillStyle = grad;
+  ctx.fill();
+  
+  // Line
+  ctx.beginPath();
+  hist.forEach((v, i) => {
+    const x = pad + (i / (hist.length-1)) * (W - pad*2);
+    const y = pad + (1 - (v - min)/(max - min)) * (H - pad*2);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = '#9b59b6';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+}
+
+// ============================================================
+// BAYES CHART  
+function drawBayesChart() {
+  const canvas = document.getElementById('bayes-chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  
+  const { prior, posterior, likelihood } = state;
+  
+  // Bars
+  const bars = [
+    { label: 'Prior', val: prior, color: '#4a5568' },
+    { label: 'Likelihood', val: Math.min(likelihood, 1), color: '#ff6b35' },
+    { label: 'Posterior', val: posterior, color: '#00d4ff' },
+  ];
+  
+  const bw = (W - 40) / bars.length - 8;
+  bars.forEach((b, i) => {
+    const x = 20 + i * ((W-40)/bars.length);
+    const barH = b.val * (H - 30);
+    const y = H - 20 - barH;
+    
+    const grad = ctx.createLinearGradient(x, y, x, H-20);
+    grad.addColorStop(0, b.color);
+    grad.addColorStop(1, b.color + '44');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, bw, barH);
+    
+    ctx.fillStyle = '#4a5568';
+    ctx.font = '8px JetBrains Mono';
+    ctx.textAlign = 'center';
+    ctx.fillText(b.label, x + bw/2, H - 4);
+    
+    ctx.fillStyle = b.color;
+    ctx.font = '9px JetBrains Mono';
+    ctx.fillText(b.val.toFixed(2), x + bw/2, y - 3);
+  });
+}
+
+// ============================================================
+// KANT GRID
+function renderKantGrid() {
+  const grid = document.getElementById('kant-grid');
+  const entries = Object.entries(state.kantValues);
+  
+  grid.innerHTML = entries.map(([k, v]) => {
+    const hue = v > 0.7 ? '#00ff88' : v > 0.5 ? '#00d4ff' : '#ff6b35';
+    return `
+      <div style="background:rgba(255,255,255,0.02);border:1px solid #1a2035;padding:6px;text-align:center">
+        <div style="font-size:8px;color:#4a5568;margin-bottom:2px">${k}</div>
+        <div style="font-size:11px;font-weight:700;color:${hue}">${(v*100).toFixed(0)}%</div>
+      </div>
+    `;
+  }).join('');
+  
+  const best = entries.reduce((a, b) => a[1] > b[1] ? a : b);
+  document.getElementById('kant-active').textContent = best[0];
+}
+
+// ============================================================
+// SIMULATION STEP
+function simulationStep() {
+  state.step++;
+  const t = state.step;
+  
+  // --- UPDATE MODALITIES ---
+  const mods = state.modalities;
+  const modKeys = Object.keys(mods);
+  
+  modKeys.forEach(k => {
+    const m = mods[k];
+    // FE decreases with noise and cooling
+    const noise = (Math.random() - 0.5) * 0.08;
+    const decay = 0.008 + Math.sin(t * 0.1) * 0.002;
+    m.fe = Math.max(0.3, m.fe - decay + noise);
+    m.temp = Math.max(0.05, m.temp * 0.997);
+    m.history.push(m.fe);
+    if (m.history.length > state.maxHistory) m.history.shift();
+  });
+  
+  // Global FE
+  const globalFE = modKeys.reduce((s, k) => s + mods[k].fe, 0) / modKeys.length;
+  state.feHistory.push(globalFE);
+  if (state.feHistory.length > state.maxHistory) state.feHistory.shift();
+  
+  if (state.initFE === null) state.initFE = globalFE;
+  
+  // --- AGENT DYNAMICS ---
+  const agents = state.agents.filter(a => !a.dead);
+  agents.forEach(a => {
+    agents.forEach(b => {
+      if (a.id === b.id) return;
+      // Update trust based on PG delta
+      const pgDelta = b.pg - a.pg;
+      a.trust[b.id] = Math.max(0.05, Math.min(0.95,
+        a.trust[b.id] * 0.97 + 0.03 * (pgDelta > 0 ? 1 : 0)
+      ));
+    });
+    // Update PG
+    const noise = (Math.random() - 0.5) * 0.04;
+    a.pg = Math.max(0.1, Math.min(0.99, a.pg + 0.003 + noise));
+    
+    // Micro movement
+    const cx = 350, cy = 160;
+    a.vx += (cx - a.x) * 0.0001 + (Math.random()-0.5)*0.3;
+    a.vy += (cy - a.y) * 0.0001 + (Math.random()-0.5)*0.3;
+    a.vx *= 0.95; a.vy *= 0.95;
+    a.x += a.vx; a.y += a.vy;
+    a.x = Math.max(20, Math.min(680, a.x));
+    a.y = Math.max(20, Math.min(300, a.y));
+  });
+  
+  // --- BAYESIAN UPDATE ---
+  const evidence = Math.random();
+  state.likelihood = 0.3 + evidence * 0.6;
+  state.posterior = (state.likelihood * state.prior) / 
+    (state.likelihood * state.prior + (1 - state.likelihood) * (1 - state.prior));
+  state.prior = state.prior * 0.98 + state.posterior * 0.02;
+  
+  // --- HEGEL DIALECTIC ---
+  const residuumDecay = 0.01 + Math.sin(t * 0.07) * 0.005;
+  state.residuum = Math.max(0.02, state.residuum - residuumDecay + (Math.random()-0.5)*0.03);
+  state.dkl = Math.max(0.01, state.dkl * 0.98 + (Math.random()-0.5)*0.05);
+  
+  // Aufhebung trigger
+  if (state.residuum < 0.05 && Math.random() < 0.05) {
+    state.residuum = 0.4 + Math.random() * 0.3;
+    state.dkl = 1.0;
+    state.aufhebung++;
+    addLog(`⬆ Aufhebung #${state.aufhebung} — новый тезис принят`, 'glow-green');
+    document.getElementById('aufhebung-val').textContent = state.aufhebung;
+    document.getElementById('sum-aufhebung').textContent = state.aufhebung;
+    
+    // Boost all PGs on dialectic breakthrough
+    state.agents.forEach(a => { a.pg = Math.min(0.99, a.pg + 0.05); });
+  }
+  
+  // Anomaly detection
+  if (Math.random() < 0.008) {
+    state.anomalies++;
+    document.getElementById('sum-anomalies').textContent = state.anomalies;
+    addLog(`⚠ Аномалия обнаружена в модальности ${modKeys[Math.floor(Math.random()*modKeys.length)]}`, 'glow-red');
+  }
+  
+  // --- KANT CATEGORIES ---
+  Object.keys(state.kantValues).forEach(k => {
+    const noise = (Math.random() - 0.5) * 0.04;
+    state.kantValues[k] = Math.max(0.1, Math.min(1.0, state.kantValues[k] + noise));
+  });
+  
+  // Hegel phase cycling
+  const phases = ['ТЕЗИС', 'АНТИТЕЗИС', 'СИНТЕЗ'];
+  const phaseIdx = Math.floor((t / 30) % 3);
+  state.hegelPhase = phases[phaseIdx];
+  
+  // Periodic log
+  if (t % 25 === 0) {
+    addLog(`Шаг ${t}: FE=${globalFE.toFixed(3)}, T=${mods.text.temp.toFixed(3)}, агентов=${agents.length}`);
+  }
+  
+  // --- RENDER ---
+  renderAll();
+}
+
+// ============================================================
+// RENDER ALL UI
+function renderAll() {
+  const s = state;
+  const mods = s.modalities;
+  const globalFE = s.feHistory[s.feHistory.length-1] || 0;
+  
+  // Status
+  document.getElementById('step-counter').textContent = s.step;
+  document.getElementById('sum-steps').textContent = s.step;
+  document.getElementById('status-text').textContent = s.running ? 'Работает' : 'Пауза';
+  
+  // FE panel
+  document.getElementById('fe-val').textContent = globalFE.toFixed(4);
+  const avgTemp = Object.values(mods).reduce((s,m)=>s+m.temp,0)/4;
+  document.getElementById('temp-val').textContent = avgTemp.toFixed(3);
+  document.getElementById('temp-bar').style.width = (avgTemp * 100) + '%';
+  
+  const entropy = -globalFE * Math.log(globalFE + 0.01) + 1.5;
+  const energy = globalFE + avgTemp * entropy;
+  document.getElementById('entropy-val').textContent = entropy.toFixed(3);
+  document.getElementById('energy-val').textContent = energy.toFixed(3);
+  
+  // Modalities
+  const modKeyMap = { text: 'text', vision: 'vision', graph: 'graph', rl: 'rl' };
+  let bestMod = 'text', bestFE = Infinity;
+  Object.entries(mods).forEach(([k, m]) => {
+    document.getElementById(`mod-${k}`).textContent = m.fe.toFixed(3);
+    const pct = Math.max(0, Math.min(1, 1 - m.fe / 6)) * 100;
+    document.getElementById(`bar-${k}`).style.width = pct + '%';
+    if (m.fe < bestFE) { bestFE = m.fe; bestMod = k; }
+  });
+  document.getElementById('best-modality').textContent = bestMod.toUpperCase();
+  
+  // Improvement
+  if (s.initFE) {
+    const imp = ((s.initFE - globalFE) / s.initFE * 100);
+    document.getElementById('sum-improvement').textContent = (imp >= 0 ? '+' : '') + imp.toFixed(1) + '%';
+  }
+  
+  // Bayesian
+  document.getElementById('bayes-val').textContent = s.posterior.toFixed(3);
+  document.getElementById('prior-val').textContent = s.prior.toFixed(3);
+  document.getElementById('posterior-val').textContent = s.posterior.toFixed(3);
+  document.getElementById('likelihood-val').textContent = s.likelihood.toFixed(3);
+  
+  // Hegel
+  document.getElementById('hegel-step').textContent = s.hegelPhase;
+  document.getElementById('residuum-val').textContent = s.residuum.toFixed(3);
+  document.getElementById('residuum-bar').style.width = (s.residuum * 100) + '%';
+  document.getElementById('dkl-val').textContent = s.dkl.toFixed(3);
+  
+  // Agent count
+  const alive = s.agents.filter(a=>!a.dead).length;
+  document.getElementById('sum-agents').textContent = alive;
+  
+  // Draw canvases
+  drawNoosphere();
+  drawFEChart();
+  drawBayesChart();
+  renderKantGrid();
+}
+
+// ============================================================
+// LOGGING
+function addLog(msg, cls='') {
+  const t = String(state.step).padStart(5, '0');
+  state.logs.unshift({ t, msg, cls });
+  if (state.logs.length > state.maxLogs) state.logs.pop();
+  
+  const body = document.getElementById('log-body');
+  body.innerHTML = state.logs.slice(0, 20).map(l => `
+    <div class="log-entry">
+      <span class="log-time">[${l.t}]</span>
+      <span class="log-msg ${l.cls || ''}">${l.msg}</span>
+    </div>
+  `).join('');
+  
+  document.getElementById('log-count').textContent = `${state.logs.length} событий`;
+}
+
+// ============================================================
+// CONTROLS
+function toggleRun() {
+  state.running = !state.running;
+  const btn = document.getElementById('btn-start');
+  
+  if (state.running) {
+    btn.textContent = '⏸ ПАУЗА';
+    addLog('▶ Симуляция запущена');
+    scheduleNext();
+  } else {
+    btn.textContent = '▶ ЗАПУСК';
+    addLog('⏸ Симуляция остановлена');
+    if (state.intervalId) clearTimeout(state.intervalId);
+  }
+}
+
+function scheduleNext() {
+  if (!state.running) return;
+  const delay = Math.max(16, 200 / state.speed);
+  state.intervalId = setTimeout(() => {
+    simulationStep();
+    scheduleNext();
+  }, delay);
+}
+
+function resetAll() {
+  state.running = false;
+  document.getElementById('btn-start').textContent = '▶ ЗАПУСК';
+  if (state.intervalId) clearTimeout(state.intervalId);
+  
+  state.step = 0;
+  state.aufhebung = 0;
+  state.anomalies = 0;
+  state.initFE = null;
+  state.feHistory = [];
+  state.logs = [];
+  state.prior = 0.5;
+  state.posterior = 0.5;
+  state.residuum = 0.5;
+  state.dkl = 1.0;
+  
+  Object.values(state.modalities).forEach(m => {
+    m.fe = 3.5 + Math.random();
+    m.temp = 1.0;
+    m.history = [];
+  });
+  
+  state.agents = initAgents(state.nAgents);
+  Object.keys(state.kantValues).forEach(k => {
+    state.kantValues[k] = 0.3 + Math.random() * 0.5;
+  });
+  
+  addLog('↺ Система сброшена');
+  renderAll();
+}
+
+function addAgent() {
+  const id = state.agents.length;
+  const cx = 350 + (Math.random()-0.5)*200;
+  const cy = 160 + (Math.random()-0.5)*120;
+  const names = ['Turing','Bayes','Shannon','Boltzmann','Markov','Helmholtz','Friston'];
+  state.agents.push({
+    id, x: cx, y: cy, vx: 0, vy: 0,
+    model: Array.from({length:16}, ()=>Math.random()),
+    trust: Array.from({length: state.agents.length+1}, (_,j) => j===id?0:Math.random()*0.3+0.1),
+    pg: Math.random()*0.4+0.2,
+    label: names[id % names.length],
+    color: `hsl(${(id*47)%360},70%,60%)`,
+    dead: false,
+  });
+  // Extend trust vectors for existing agents
+  state.agents.forEach((a, i) => {
+    if (i < id) a.trust.push(Math.random()*0.3+0.1);
+  });
+  state.nAgents++;
+  addLog(`➕ Агент ${id} (${state.agents[id].label}) добавлен в ноосферу`);
+}
+
+function injectNoise() {
+  // Perturb all modalities
+  Object.values(state.modalities).forEach(m => {
+    m.fe += 0.5 + Math.random() * 0.8;
+    m.fe = Math.min(m.fe, 6.0);
+  });
+  state.residuum = Math.min(1.0, state.residuum + 0.3);
+  state.agents.forEach(a => {
+    a.pg = Math.max(0.1, a.pg - Math.random()*0.15);
+    a.vx += (Math.random()-0.5)*3;
+    a.vy += (Math.random()-0.5)*3;
+  });
+  addLog('⚡ Шум инжектирован — свободная энергия возросла', 'glow-red');
+  state.anomalies += 3;
+  document.getElementById('sum-anomalies').textContent = state.anomalies;
+}
+
+// Speed slider
+document.getElementById('speed').addEventListener('input', function() {
+  state.speed = +this.value;
+  document.getElementById('speed-val').textContent = this.value + '×';
+});
+
+// ============================================================
+// BOOT
+state.agents = initAgents(state.nAgents);
+addLog('🚀 Phase 5: UAF Noosphere Engine инициализирован');
+addLog('   Агентов: 7 · Модальностей: 4 · Принцип: F = U − T·H');
+addLog('   Жмите ▶ ЗАПУСК для начала симуляции');
+renderAll();
+</script>
+</body>
+</html>
